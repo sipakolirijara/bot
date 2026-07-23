@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import '../services/api_service.dart';
 
 class AdminScreen extends StatelessWidget {
@@ -116,7 +116,7 @@ class _AdminSnipeTabState extends State<AdminSnipeTab> {
                 color: Colors.red.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(PhosphorIcons.warningCircle(PhosphorIconsStyle.fill), color: Colors.red, size: 48),
+              child: Icon(PhosphorIcons.warningCircleFill, color: Colors.red, size: 48),
             ),
             const SizedBox(height: 16),
             Text(
@@ -150,7 +150,7 @@ class _AdminSnipeTabState extends State<AdminSnipeTab> {
                       Navigator.pop(ctx);
                       _executeSnipe();
                     },
-                    icon: Icon(PhosphorIcons.lightning(PhosphorIconsStyle.fill)),
+                    icon: Icon(PhosphorIcons.lightningFill),
                     label: const Text('Execute Snipe', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ),
@@ -208,7 +208,6 @@ class _AdminSnipeTabState extends State<AdminSnipeTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Contract Address Card
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -222,7 +221,7 @@ class _AdminSnipeTabState extends State<AdminSnipeTab> {
                 children: [
                   Row(
                     children: [
-                      Icon(PhosphorIcons.magnifyingGlass(PhosphorIconsStyle.bold), color: theme.primaryColor, size: 20),
+                      Icon(PhosphorIcons.magnifyingGlassBold, color: theme.primaryColor, size: 20),
                       const SizedBox(width: 8),
                       Text('Target Contract', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                     ],
@@ -234,7 +233,7 @@ class _AdminSnipeTabState extends State<AdminSnipeTab> {
                       labelText: 'Solana Token Address',
                       hintText: 'Paste contract here...',
                       suffixIcon: IconButton(
-                        icon: Icon(PhosphorIcons.clipboard()),
+                        icon: Icon(PhosphorIcons.clipboard),
                         onPressed: _pasteFromClipboard,
                         color: theme.primaryColor,
                       ),
@@ -246,7 +245,6 @@ class _AdminSnipeTabState extends State<AdminSnipeTab> {
             ),
             const SizedBox(height: 16),
 
-            // Trade Parameters Card
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -260,7 +258,7 @@ class _AdminSnipeTabState extends State<AdminSnipeTab> {
                 children: [
                   Row(
                     children: [
-                      Icon(PhosphorIcons.sliders(PhosphorIconsStyle.bold), color: theme.primaryColor, size: 20),
+                      Icon(PhosphorIcons.slidersBold, color: theme.primaryColor, size: 20),
                       const SizedBox(width: 8),
                       Text('Execution Parameters', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                     ],
@@ -271,7 +269,7 @@ class _AdminSnipeTabState extends State<AdminSnipeTab> {
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
                       labelText: 'Trade Size (USD)',
-                      prefixIcon: Icon(PhosphorIcons.currencyDollar()),
+                      prefixIcon: Icon(PhosphorIcons.currencyDollar),
                     ),
                     validator: (v) => v == null || double.tryParse(v) == null ? 'Invalid size' : null,
                   ),
@@ -284,7 +282,7 @@ class _AdminSnipeTabState extends State<AdminSnipeTab> {
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           decoration: InputDecoration(
                             labelText: 'Take Profit (%)',
-                            prefixIcon: Icon(PhosphorIcons.trendUp(), color: Colors.green),
+                            prefixIcon: Icon(PhosphorIcons.trendUp, color: Colors.green),
                           ),
                         ),
                       ),
@@ -295,7 +293,7 @@ class _AdminSnipeTabState extends State<AdminSnipeTab> {
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           decoration: InputDecoration(
                             labelText: 'Stop Loss (%)',
-                            prefixIcon: Icon(PhosphorIcons.trendDown(), color: Colors.red),
+                            prefixIcon: Icon(PhosphorIcons.trendDown, color: Colors.red),
                           ),
                         ),
                       ),
@@ -306,7 +304,6 @@ class _AdminSnipeTabState extends State<AdminSnipeTab> {
             ),
             const SizedBox(height: 16),
 
-            // Live Calculator
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -319,7 +316,7 @@ class _AdminSnipeTabState extends State<AdminSnipeTab> {
                 children: [
                   Row(
                     children: [
-                      Icon(PhosphorIcons.calculator(PhosphorIconsStyle.fill), color: theme.colorScheme.onSurfaceVariant, size: 16),
+                      Icon(PhosphorIcons.calculatorFill, color: theme.colorScheme.onSurfaceVariant, size: 16),
                       const SizedBox(width: 8),
                       Text('LIVE PROFIT CALCULATOR', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold, letterSpacing: 1.1)),
                     ],
@@ -353,7 +350,6 @@ class _AdminSnipeTabState extends State<AdminSnipeTab> {
             ),
             const SizedBox(height: 24),
 
-            // Execute Button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -367,7 +363,7 @@ class _AdminSnipeTabState extends State<AdminSnipeTab> {
                 ),
                 icon: _isLoading 
                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : Icon(PhosphorIcons.rocketLaunch(PhosphorIconsStyle.fill)),
+                  : Icon(PhosphorIcons.rocketLaunchFill),
                 label: Text(
                   _isLoading ? 'Executing...' : 'Deploy Contract', 
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)

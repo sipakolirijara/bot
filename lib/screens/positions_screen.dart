@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import '../services/api_service.dart';
 
 class PositionsScreen extends StatefulWidget {
@@ -16,7 +16,6 @@ class _PositionsScreenState extends State<PositionsScreen> {
   bool _isLoading = true;
   List<dynamic> _openPositions = [];
   List<dynamic> _closedPositions = [];
-  Map<String, dynamic> _stats = {'open_count': 0, 'total_pnl': 0.0};
 
   @override
   void initState() {
@@ -40,7 +39,6 @@ class _PositionsScreenState extends State<PositionsScreen> {
     if (mounted) {
       if (res['status'] == 'success') {
         setState(() {
-          _stats = res['stats'] ?? _stats;
           _openPositions = res['open_positions'] ?? [];
           _closedPositions = res['closed_positions'] ?? [];
           _isLoading = false;
@@ -101,7 +99,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
           children: [
             Row(
               children: [
-                Icon(PhosphorIcons.sliders(PhosphorIconsStyle.fill), color: Theme.of(context).primaryColor),
+                Icon(PhosphorIcons.slidersFill, color: Theme.of(context).primaryColor),
                 const SizedBox(width: 8),
                 Text('Edit Targets', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
               ],
@@ -112,7 +110,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(
                 labelText: 'Take Profit (%)',
-                prefixIcon: Icon(PhosphorIcons.trendUp(PhosphorIconsStyle.bold), color: Colors.green),
+                prefixIcon: Icon(PhosphorIcons.trendUpBold, color: Colors.green),
               ),
             ),
             const SizedBox(height: 16),
@@ -121,7 +119,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(
                 labelText: 'Stop Loss (%)',
-                prefixIcon: Icon(PhosphorIcons.trendDown(PhosphorIconsStyle.bold), color: Colors.red),
+                prefixIcon: Icon(PhosphorIcons.trendDownBold, color: Colors.red),
               ),
             ),
             const SizedBox(height: 24),
@@ -162,7 +160,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
-            Icon(PhosphorIcons.warningCircle(PhosphorIconsStyle.fill), color: Colors.red),
+            Icon(PhosphorIcons.warningCircleFill, color: Colors.red),
             const SizedBox(width: 8),
             const Text('Confirm Exit', style: TextStyle(fontWeight: FontWeight.bold)),
           ],
@@ -232,7 +230,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(PhosphorIcons.folderDashed(PhosphorIconsStyle.duotone), size: 64, color: theme.dividerColor),
+            Icon(PhosphorIcons.folderDashed, size: 64, color: theme.dividerColor),
             const SizedBox(height: 16),
             Text('No open positions', style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
           ],
@@ -279,7 +277,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
                     ),
                     Row(
                       children: [
-                        Icon(PhosphorIcons.clock(PhosphorIconsStyle.bold), size: 14, color: theme.colorScheme.onSurfaceVariant),
+                        Icon(PhosphorIcons.clockBold, size: 14, color: theme.colorScheme.onSurfaceVariant),
                         const SizedBox(width: 4),
                         Text(
                           _calculateDuration(p['opened_at']),
@@ -335,7 +333,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
                             ),
                             child: Row(
                               children: [
-                                Icon(PhosphorIcons.pencilSimple(), size: 14),
+                                Icon(PhosphorIcons.pencilSimple, size: 14),
                                 const SizedBox(width: 4),
                                 Text('+${p['tp_percent']}%', style: const TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)),
                                 const Text(' / ', style: TextStyle(fontSize: 12)),
@@ -348,7 +346,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
                     ),
                     ElevatedButton.icon(
                       onPressed: () => _showCloseConfirm(p),
-                      icon: Icon(PhosphorIcons.handPalm(PhosphorIconsStyle.bold), size: 16),
+                      icon: Icon(PhosphorIcons.handPalmBold, size: 16),
                       label: const Text('Close Now', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red.withOpacity(0.1),
@@ -373,7 +371,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(PhosphorIcons.receipt(PhosphorIconsStyle.duotone), size: 64, color: theme.dividerColor),
+            Icon(PhosphorIcons.receipt, size: 64, color: theme.dividerColor),
             const SizedBox(height: 16),
             Text('No closed positions', style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
           ],
@@ -421,7 +419,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
                   children: [
                     Row(
                       children: [
-                        Icon(PhosphorIcons.hourglassHigh(PhosphorIconsStyle.bold), size: 12, color: theme.colorScheme.onSurfaceVariant),
+                        Icon(PhosphorIcons.hourglassHighBold, size: 12, color: theme.colorScheme.onSurfaceVariant),
                         const SizedBox(width: 4),
                         Text(
                           _calculateDuration(p['opened_at'], p['closed_at']),

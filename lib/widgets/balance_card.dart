@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import '../services/api_service.dart';
 
 class BalanceCard extends StatefulWidget {
@@ -63,11 +63,11 @@ class _BalanceCardState extends State<BalanceCard> {
         : _errorMessage.isNotEmpty
           ? Row(
               children: [
-                Icon(PhosphorIcons.warningCircle(PhosphorIconsStyle.fill), color: Colors.red),
+                Icon(PhosphorIcons.warningCircleFill, color: Colors.red),
                 const SizedBox(width: 8),
                 Expanded(child: Text(_errorMessage, style: const TextStyle(color: Colors.red))),
                 IconButton(
-                  icon: Icon(PhosphorIcons.arrowsClockwise()),
+                  icon: Icon(PhosphorIcons.arrowsClockwise),
                   onPressed: () {
                     setState(() { _isLoading = true; _errorMessage = ""; });
                     _fetchBalance();
@@ -94,7 +94,7 @@ class _BalanceCardState extends State<BalanceCard> {
                         setState(() => _isLoading = true);
                         _fetchBalance();
                       },
-                      child: Icon(PhosphorIcons.arrowsClockwise(), size: 16, color: theme.primaryColor),
+                      child: Icon(PhosphorIcons.arrowsClockwise, size: 16, color: theme.primaryColor),
                     ),
                   ],
                 ),

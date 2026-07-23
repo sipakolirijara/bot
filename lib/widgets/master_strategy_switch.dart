@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import '../services/api_service.dart';
 
 class MasterStrategySwitch extends StatefulWidget {
@@ -78,7 +78,7 @@ class _MasterStrategySwitchState extends State<MasterStrategySwitch> {
               shape: BoxShape.circle,
             ),
             child: Icon(
-              isActive ? PhosphorIcons.rocketLaunch(PhosphorIconsStyle.fill) : PhosphorIcons.pauseCircle(PhosphorIconsStyle.fill),
+              isActive ? PhosphorIcons.rocketLaunchFill : PhosphorIcons.pauseCircleFill,
               color: isActive ? Colors.green : Colors.amber,
               size: 24,
             ),

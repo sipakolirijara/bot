@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import '../services/api_service.dart';
 import '../widgets/balance_card.dart';
 import '../widgets/master_strategy_switch.dart';
@@ -36,7 +36,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: Icon(PhosphorIcons.signOut()),
+            icon: Icon(PhosphorIcons.signOut),
             onPressed: () => apiService.logout(),
           ),
         ],
@@ -48,24 +48,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
         indicatorColor: theme.primaryColor.withOpacity(0.2),
         destinations: [
           NavigationDestination(
-            icon: Icon(PhosphorIcons.squaresFour()),
-            selectedIcon: Icon(PhosphorIcons.squaresFour(PhosphorIconsStyle.fill), color: theme.primaryColor),
+            icon: Icon(PhosphorIcons.squaresFour),
+            selectedIcon: Icon(PhosphorIcons.squaresFourFill, color: theme.primaryColor),
             label: 'Home',
           ),
           NavigationDestination(
-            icon: Icon(PhosphorIcons.chartLineUp()),
-            selectedIcon: Icon(PhosphorIcons.chartLineUp(PhosphorIconsStyle.fill), color: theme.primaryColor),
+            icon: Icon(PhosphorIcons.chartLineUp),
+            selectedIcon: Icon(PhosphorIcons.chartLineUpFill, color: theme.primaryColor),
             label: 'Positions',
           ),
           if (isAdmin)
             NavigationDestination(
-              icon: Icon(PhosphorIcons.shieldCheck()),
-              selectedIcon: Icon(PhosphorIcons.shieldCheck(PhosphorIconsStyle.fill), color: theme.primaryColor),
+              icon: Icon(PhosphorIcons.shieldCheck),
+              selectedIcon: Icon(PhosphorIcons.shieldCheckFill, color: theme.primaryColor),
               label: 'Admin',
             ),
           NavigationDestination(
-            icon: Icon(PhosphorIcons.gear()),
-            selectedIcon: Icon(PhosphorIcons.gear(PhosphorIconsStyle.fill), color: theme.primaryColor),
+            icon: Icon(PhosphorIcons.gear),
+            selectedIcon: Icon(PhosphorIcons.gearFill, color: theme.primaryColor),
             label: 'Settings',
           ),
         ],
@@ -92,7 +92,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     color: theme.primaryColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(PhosphorIcons.handWaving(PhosphorIconsStyle.fill), color: theme.primaryColor),
+                  child: Icon(PhosphorIcons.handWavingFill, color: theme.primaryColor),
                 ),
                 const SizedBox(width: 12),
                 Column(

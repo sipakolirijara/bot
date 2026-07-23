@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import '../services/api_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -35,7 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
           SnackBar(
             content: Row(
               children: [
-                Icon(PhosphorIcons.warningCircle(PhosphorIconsStyle.fill), color: Colors.white),
+                Icon(PhosphorIcons.warningCircleFill, color: Colors.white),
                 const SizedBox(width: 8),
                 Expanded(child: Text(result['message'] ?? 'Login failed')),
               ],
@@ -77,7 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      PhosphorIcons.lightning(PhosphorIconsStyle.fill),
+                      PhosphorIcons.lightningFill,
                       size: 48,
                       color: theme.primaryColor,
                     ),
@@ -105,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _usernameController,
                     decoration: InputDecoration(
                       labelText: 'Username',
-                      prefixIcon: Icon(PhosphorIcons.user()),
+                      prefixIcon: Icon(PhosphorIcons.user),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -120,10 +120,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     obscureText: _obscurePassword,
                     decoration: InputDecoration(
                       labelText: 'Password',
-                      prefixIcon: Icon(PhosphorIcons.lockKey()),
+                      prefixIcon: Icon(PhosphorIcons.lockKey),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscurePassword ? PhosphorIcons.eyeClosed() : PhosphorIcons.eye(),
+                          _obscurePassword ? PhosphorIcons.eyeClosed : PhosphorIcons.eye,
                         ),
                         onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                       ),
