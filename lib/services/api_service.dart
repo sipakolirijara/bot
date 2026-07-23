@@ -11,6 +11,10 @@ class ApiService extends ChangeNotifier {
   String? _role;
   bool _isInit = false;
 
+  bool _allowManual = false;
+  bool get allowManualTrade => _allowManual;
+  bool _allowManual = false;
+  bool get allowManualTrade => _allowManual;
   bool get isAuthenticated => _token != null && _token!.isNotEmpty;
   bool get isInitialized => _isInit;
   String? get role => _role;
@@ -44,6 +48,8 @@ class ApiService extends ChangeNotifier {
       if (data['status'] == 'success') {
         // Aggressively hunt for the token regardless of PHP array structure
         _token = data['token'] ?? data['api_token'] ?? (data['data'] != null ? (data['data']['token'] ?? data['data']['api_token']) : null);
+        _allowManual = (data['allow_manual_trade'] == 1 || data['allow_manual_trade'] == '1' || data['data']?['allow_manual_trade'] == 1);
+        _allowManual = (data['allow_manual_trade'] == 1 || data['allow_manual_trade'] == '1' || data['data']?['allow_manual_trade'] == 1);
         _role = data['role'] ?? (data['data'] != null ? data['data']['role'] : 'user');
 
         if (_token != null && _token!.isNotEmpty) {
