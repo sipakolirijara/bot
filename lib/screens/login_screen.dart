@@ -115,7 +115,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 child: _isLoading
                                     ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                    : const Text('INITIALIZE TERMINAL', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.5, color: Colors.white)),
+                                    : const Text('LOGIN', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.5, color: Colors.white)),
                               ),
                             ),
                           ),

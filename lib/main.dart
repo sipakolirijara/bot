@@ -33,6 +33,9 @@ class KainuwaApp extends StatelessWidget {
       theme: AppTheme.darkTheme,
       home: Consumer<ApiService>(
         builder: (context, apiService, child) {
+          if (!apiService.isInitialized) {
+            return const Scaffold(backgroundColor: AppTheme.darkBackground, body: Center(child: CircularProgressIndicator()));
+          }
           if (apiService.isAuthenticated) {
             return const DashboardScreen();
           }
