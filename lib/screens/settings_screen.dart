@@ -47,7 +47,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // --- PASSWORD UPDATE MODAL ---
   void _showPasswordModal() {
     final oldPassController = TextEditingController();
     final newPassController = TextEditingController();
@@ -113,7 +112,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // --- PRIVATE KEY MODAL ---
   void _showPrivateKeyModal() {
     final keyController = TextEditingController();
     bool obscureKey = true;
@@ -167,13 +165,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // --- COPY TRADING STRATEGY MODAL ---
   void _showStrategyModal(Map<String, dynamic> strat) {
     final assign = strat['assignment'] ?? {};
     bool isEnabled = assign['enabled'] == true;
-    final usdController = TextEditingController(text: assign['trade_usd_amount'].toString());
-    final tpController = TextEditingController(text: assign['tp_percent'].toString());
-    final slController = TextEditingController(text: assign['sl_percent'].toString());
+    final usdController = TextEditingController(text: assign['trade_usd_amount']?.toString() ?? '10');
+    final tpController = TextEditingController(text: assign['tp_percent']?.toString() ?? '50');
+    final slController = TextEditingController(text: assign['sl_percent']?.toString() ?? '20');
     final theme = Theme.of(context);
     
     showModalBottomSheet(
@@ -241,12 +238,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         Navigator.pop(ctx);
                         setState(() => _isLoading = true);
                         final api = context.read<ApiService>();
-                        final res = await api.postEndpoint('strategies.php?action=assign', {
-                          'wallet_id': strat['wallet_id'],
+                        // ALIGNED WITH YOUR PHP SCRIPT HERE:
+                        final res = await api.postEndpoint('strategies.php?action=assign_wallet', {
+                          'tracked_wallet_id': strat['tracked_wallet_id'],
                           'trade_usd_amount': usdController.text,
                           'tp_percent': tpController.text,
                           'sl_percent': slController.text,
-                          'enabled': isEnabled,
+                          'enabled': isEnabled ? 1 : 0,
                         });
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Strategy updated'), backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red));
@@ -356,11 +354,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     title: Text(strat['label'] ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                     subtitle: Text(
-                      isEnabled ? '\$${assign['trade_usd_amount']} | +${assign['tp_percent']}% / -${assign['sl_percent']}%' : 'Unassigned or paused',
+                      isEnabled ? '\$${assign['trade_usd_amount'] ?? 10} | +${assign['tp_percent'] ?? 50}% / -${assign['sl_percent'] ?? 20}%' : 'Unassigned or paused',
                       style: TextStyle(fontSize: 12, color: isEnabled ? Colors.greenAccent : theme.colorScheme.onSurfaceVariant),
                     ),
                     trailing: Icon(PhosphorIcons.caretRight, color: Colors.white.withOpacity(0.5)),
-                    onTap: () => _showStrategyModal(strat), // <--- WIRED HERE
+                    onTap: () => _showStrategyModal(strat),
                   ),
                 ),
               );
