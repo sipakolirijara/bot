@@ -11,7 +11,7 @@ class ApiService extends ChangeNotifier {
   String? _role;
   bool _isInit = false;
 
-  bool get isAuthenticated => _token != null;
+  bool get isAuthenticated => _token != null && _token!.isNotEmpty;
   bool get isInitialized => _isInit;
   String? get role => _role;
 
@@ -20,8 +20,13 @@ class ApiService extends ChangeNotifier {
   }
 
   Future<void> _initAuth() async {
-    _token = await _storage.read(key: 'api_token');
-    _role = await _storage.read(key: 'user_role');
+    try {
+      _token = await _storage.read(key: 'api_token');
+      _role = await _storage.read(key: 'user_role');
+    } catch (e) {
+      // If the Android Keystore corrupted during the app rebuild, wipe it clean.
+      await _storage.deleteAll().catchError((_) {});
+    }
     _isInit = true;
     notifyListeners();
   }
@@ -33,30 +38,47 @@ class ApiService extends ChangeNotifier {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'username': username, 'password': password}),
       );
+      
       final data = jsonDecode(res.body);
+      
       if (data['status'] == 'success') {
-        _token = data['token'];
-        _role = data['role'];
-        await _storage.write(key: 'api_token', value: _token);
-        await _storage.write(key: 'user_role', value: _role);
-        notifyListeners();
+        // Aggressively hunt for the token regardless of PHP array structure
+        _token = data['token'] ?? data['api_token'] ?? (data['data'] != null ? (data['data']['token'] ?? data['data']['api_token']) : null);
+        _role = data['role'] ?? (data['data'] != null ? data['data']['role'] : 'user');
+
+        if (_token != null && _token!.isNotEmpty) {
+          try {
+            await _storage.write(key: 'api_token', value: _token);
+            await _storage.write(key: 'user_role', value: _role);
+          } catch (e) {
+            // Ignore secure storage errors on mismatched devices, maintain memory session
+            await _storage.deleteAll().catchError((_) {});
+          }
+          notifyListeners();
+        } else {
+          return {'status': 'error', 'message': 'Authentication token missing from server response.'};
+        }
       }
       return data;
     } catch (e) {
-      return {'status': 'error', 'message': 'Network error'};
+      return {'status': 'error', 'message': 'Network connection failed. Please try again.'};
     }
   }
 
   Future<void> logout() async {
     _token = null;
     _role = null;
-    await _storage.delete(key: 'api_token');
-    await _storage.delete(key: 'user_role');
+    try {
+      await _storage.delete(key: 'api_token');
+      await _storage.delete(key: 'user_role');
+    } catch (e) {
+      // Ignore
+    }
     notifyListeners();
   }
 
   Future<Map<String, dynamic>> getEndpoint(String endpoint) async {
-    if (_token == null) return {'status': 'error', 'message': 'Unauthorized'};
+    if (!isAuthenticated) return {'status': 'error', 'message': 'Unauthorized'};
     try {
       final res = await http.get(
         Uri.parse('$baseUrl/$endpoint'),
@@ -69,7 +91,7 @@ class ApiService extends ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> postEndpoint(String endpoint, Map<String, dynamic> payload) async {
-    if (_token == null) return {'status': 'error', 'message': 'Unauthorized'};
+    if (!isAuthenticated) return {'status': 'error', 'message': 'Unauthorized'};
     try {
       final res = await http.post(
         Uri.parse('$baseUrl/$endpoint'),

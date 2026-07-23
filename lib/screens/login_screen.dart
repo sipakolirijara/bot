@@ -22,6 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
+    
     final apiService = context.read<ApiService>();
     final result = await apiService.login(_usernameController.text.trim(), _passwordController.text);
 
@@ -30,6 +31,10 @@ class _LoginScreenState extends State<LoginScreen> {
       if (result['status'] == 'error') {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(result['message'] ?? 'Login failed'), backgroundColor: Colors.redAccent),
+        );
+      } else if (result['status'] == 'success' && !apiService.isAuthenticated) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Login successful, but device failed to securely store session.'), backgroundColor: Colors.orange),
         );
       }
     }
