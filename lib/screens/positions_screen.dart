@@ -49,21 +49,32 @@ class _PositionsScreenState extends State<PositionsScreen> {
     }
   }
 
+  String _formatAddress(dynamic addr) {
+    if (addr == null) return 'Unknown Token';
+    String str = addr.toString();
+    if (str.length <= 10) return str;
+    return '${str.substring(0, 10)}...';
+  }
+
   String _formatMcap(dynamic v) {
     if (v == null) return '-';
-    double val = v is String ? double.parse(v) : (v as num).toDouble();
+    double val = v is String ? (double.tryParse(v) ?? 0.0) : (v as num).toDouble();
     if (val >= 1000000) return '\$${(val / 1000000).toStringAsFixed(2)}M';
     if (val >= 1000) return '\$${(val / 1000).toStringAsFixed(1)}K';
     return '\$${val.round()}';
   }
 
-  String _calculateDuration(String? openedAtStr, [String? closedAtStr]) {
+  String _calculateDuration(dynamic openedAtStr, [dynamic closedAtStr]) {
     if (openedAtStr == null) return '-';
     try {
-      DateTime start = DateTime.parse('${openedAtStr.replaceAll(' ', 'T')}Z').toLocal();
-      DateTime end = closedAtStr != null 
-          ? DateTime.parse('${closedAtStr.replaceAll(' ', 'T')}Z').toLocal() 
-          : DateTime.now();
+      String oStr = openedAtStr.toString().replaceAll(' ', 'T');
+      DateTime start = DateTime.parse('${oStr}Z').toLocal();
+      DateTime end = DateTime.now();
+
+      if (closedAtStr != null) {
+        String cStr = closedAtStr.toString().replaceAll(' ', 'T');
+        end = DateTime.parse('${cStr}Z').toLocal();
+      }
           
       int diffMins = end.difference(start).inMinutes;
       if (diffMins < 1) return '< 1m';
@@ -165,7 +176,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
             const Text('Confirm Exit', style: TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
-        content: Text('Are you sure you want to exit position ${(pos['token_address'] as String).substring(0, 8)}... at current market cap?'),
+        content: Text('Are you sure you want to exit position ${_formatAddress(pos['token_address'])} at current market cap?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -246,7 +257,6 @@ class _PositionsScreenState extends State<PositionsScreen> {
         itemBuilder: (context, index) {
           final p = _openPositions[index];
           final pnl = p['unrealized_pnl'] != null ? (p['unrealized_pnl'] as num).toDouble() : null;
-          final pct = p['change_percent'] != null ? (p['change_percent'] as num).toDouble() : null;
           final isProfit = pnl != null && pnl >= 0;
 
           return Container(
@@ -271,7 +281,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        '${(p['token_address'] as String).substring(0, 10)}...',
+                        _formatAddress(p['token_address']),
                         style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 12, color: theme.primaryColor),
                       ),
                     ),
@@ -321,28 +331,24 @@ class _PositionsScreenState extends State<PositionsScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        InkWell(
-                          onTap: () => _showEditModal(p),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: theme.dividerColor),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(PhosphorIcons.pencilSimple, size: 14),
-                                const SizedBox(width: 4),
-                                Text('+${p['tp_percent']}%', style: const TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)),
-                                const Text(' / ', style: TextStyle(fontSize: 12)),
-                                Text('-${p['sl_percent']}%', style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
-                              ],
-                            ),
-                          ),
+                    InkWell(
+                      onTap: () => _showEditModal(p),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: theme.dividerColor),
+                          borderRadius: BorderRadius.circular(6),
                         ),
-                      ],
+                        child: Row(
+                          children: [
+                            Icon(PhosphorIcons.pencilSimple, size: 14),
+                            const SizedBox(width: 4),
+                            Text('+${p['tp_percent']}%', style: const TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)),
+                            const Text(' / ', style: TextStyle(fontSize: 12)),
+                            Text('-${p['sl_percent']}%', style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
                     ),
                     ElevatedButton.icon(
                       onPressed: () => _showCloseConfirm(p),
@@ -404,7 +410,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '${(p['token_address'] as String).substring(0, 10)}...',
+                      _formatAddress(p['token_address']),
                       style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 12),
                     ),
                     Text(
@@ -434,7 +440,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        p['close_reason'] ?? 'MANUAL',
+                        p['close_reason']?.toString() ?? 'MANUAL',
                         style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                       ),
                     ),
