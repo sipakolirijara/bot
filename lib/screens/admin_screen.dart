@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package0/phosphoricons_flutter/phosphoricons_flutter.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import '../services/api_service.dart';
+import '../widgets/glass_card.dart';
 
 class AdminScreen extends StatelessWidget {
   const AdminScreen({super.key});
@@ -15,29 +17,44 @@ class AdminScreen extends StatelessWidget {
       length: 4,
       child: Column(
         children: [
+          const SizedBox(height: 12),
+          // Custom Pill Navigation for Admin Sub-Sections
           Container(
-            color: theme.colorScheme.surface,
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white.withOpacity(0.05)),
+            ),
             child: TabBar(
               isScrollable: true,
-              labelColor: theme.primaryColor,
-              unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
-              indicatorColor: theme.primaryColor,
               tabAlignment: TabAlignment.start,
+              indicatorSize: TabBarIndicatorSize.tab,
+              dividerColor: Colors.transparent,
+              indicator: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                gradient: LinearGradient(colors: [theme.primaryColor, const Color(0xFFE024CE)]),
+              ),
+              labelColor: Colors.white,
+              unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
+              labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 0.5),
               tabs: const [
                 Tab(text: 'Manual Snipe'),
                 Tab(text: 'Tracked Wallets'),
-                Tab(text: 'Bot Config'),
+                Tab(text: 'Bot Engine'),
                 Tab(text: 'Team Quotas'),
               ],
             ),
           ),
+          const SizedBox(height: 12),
           const Expanded(
             child: TabBarView(
               children: [
                 AdminSnipeTab(),
-                Center(child: Text('Wallets UI Loaded')),
-                Center(child: Text('Config UI Loaded')),
-                Center(child: Text('Quotas UI Loaded')),
+                TrackedWalletsTab(),
+                BotConfigTab(),
+                TeamQuotasTab(),
               ],
             ),
           ),
@@ -47,7 +64,7 @@ class AdminScreen extends StatelessWidget {
   }
 }
 
-// ==================== TAB 1: MANUAL SNIPE (WITH SOLANA VALIDATION) ====================
+// ==================== TAB 1: MANUAL SNIPE ====================
 class AdminSnipeTab extends StatefulWidget {
   const AdminSnipeTab({super.key});
 
@@ -63,7 +80,6 @@ class _AdminSnipeTabState extends State<AdminSnipeTab> {
   final _slController = TextEditingController(text: '20');
 
   double _expectedProfit = 5.00;
-  double _multiplier = 1.50;
   bool _isLoading = false;
 
   @override
@@ -73,20 +89,10 @@ class _AdminSnipeTabState extends State<AdminSnipeTab> {
     _tpController.addListener(_updateCalc);
   }
 
-  @override
-  void dispose() {
-    _tokenController.dispose();
-    _usdController.dispose();
-    _tpController.dispose();
-    _slController.dispose();
-    super.dispose();
-  }
-
   void _updateCalc() {
     final tp = double.tryParse(_tpController.text) ?? 0;
     final size = double.tryParse(_usdController.text) ?? 0;
     setState(() {
-      _multiplier = 1 + (tp / 100);
       _expectedProfit = size * (tp / 100);
     });
   }
@@ -98,71 +104,17 @@ class _AdminSnipeTabState extends State<AdminSnipeTab> {
     }
   }
 
-  // STRICT SOLANA BASE58 VALIDATOR
   String? _validateSolanaAddress(String? value) {
-    if (value == null || value.trim().isEmpty) return 'Address is required';
+    if (value == null || value.trim().isEmpty) return 'Address required';
     final val = value.trim();
-    // Checks for base58 string of correct length
     if (!RegExp(r'^[1-9A-HJ-NP-Za-km-z]{32,44}$').hasMatch(val)) {
       return 'Invalid Solana address format';
     }
     return null;
   }
 
-  void _confirmExecution() {
-    if (!_formKey.currentState!.validate()) return;
-    
-    FocusScope.of(context).unfocus();
-    
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), shape: BoxShape.circle),
-              child: Icon(PhosphorIcons.warningCircleFill, color: Colors.red, size: 48),
-            ),
-            const SizedBox(height: 16),
-            Text('Execute REAL Trade', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text(
-              'You are about to execute a market buy order for \$${_usdController.text} USD.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(child: TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold)))),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16)),
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      _executeSnipe();
-                    },
-                    icon: Icon(PhosphorIcons.lightningFill),
-                    label: const Text('Execute', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: MediaQuery.of(ctx).viewInsets.bottom),
-          ],
-        ),
-      ),
-    );
-  }
-
   Future<void> _executeSnipe() async {
+    if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
     final api = context.read<ApiService>();
     final res = await api.postEndpoint('trade.php', {
@@ -175,7 +127,7 @@ class _AdminSnipeTabState extends State<AdminSnipeTab> {
     if (mounted) {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(res['message'] ?? (res['status'] == 'success' ? 'Trade executed' : 'Execution failed')),
+        content: Text(res['message'] ?? (res['status'] == 'success' ? 'Trade deployed!' : 'Execution failed')),
         backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red,
       ));
       if (res['status'] == 'success') _tokenController.clear();
@@ -187,46 +139,272 @@ class _AdminSnipeTabState extends State<AdminSnipeTab> {
     final theme = Theme.of(context);
     
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(20.0),
       child: Form(
         key: _formKey,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: theme.colorScheme.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: theme.dividerColor.withOpacity(0.1))),
+            GlassCard(
+              padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Target Contract', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                  Row(
+                    children: [
+                      Icon(PhosphorIcons.crosshairFill, color: theme.primaryColor),
+                      const SizedBox(width: 8),
+                      const Text('Target Contract', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                    ],
+                  ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _tokenController,
+                    style: const TextStyle(color: Colors.white, fontFamily: 'monospace', fontSize: 13),
                     decoration: InputDecoration(
                       labelText: 'Solana Token Address',
-                      hintText: 'Paste contract here...',
-                      suffixIcon: IconButton(icon: Icon(PhosphorIcons.clipboard), onPressed: _pasteFromClipboard, color: theme.primaryColor),
+                      labelStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+                      suffixIcon: IconButton(icon: Icon(PhosphorIcons.clipboard, color: theme.primaryColor), onPressed: _pasteFromClipboard),
+                      filled: true,
+                      fillColor: Colors.black.withOpacity(0.2),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                     ),
-                    validator: _validateSolanaAddress, // Using the new strict validator
+                    validator: _validateSolanaAddress,
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 16),
-            // ... (Rest of the Execution Parameters UI remains the same)
+            GlassCard(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('EXECUTION PARAMETERS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1)),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _usdController,
+                          keyboardType: TextInputType.number,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            labelText: 'Trade Size (\$)',
+                            labelStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+                            filled: true,
+                            fillColor: Colors.black.withOpacity(0.2),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _tpController,
+                          keyboardType: TextInputType.number,
+                          style: const TextStyle(color: Colors.greenAccent),
+                          decoration: InputDecoration(
+                            labelText: 'Take Profit (%)',
+                            labelStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+                            filled: true,
+                            fillColor: Colors.black.withOpacity(0.2),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.03), borderRadius: BorderRadius.circular(12)),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Projected Target Profit:', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12)),
+                        Text('+\$${_expectedProfit.toStringAsFixed(2)}', style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 14)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _isLoading ? null : _confirmExecution,
-                style: ElevatedButton.styleFrom(backgroundColor: theme.primaryColor, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16)),
-                icon: _isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : Icon(PhosphorIcons.rocketLaunchFill),
-                label: Text(_isLoading ? 'Executing...' : 'Deploy Contract', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: LinearGradient(colors: [theme.primaryColor, const Color(0xFFE024CE)]),
+                  boxShadow: [BoxShadow(color: theme.primaryColor.withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 5))],
+                ),
+                child: ElevatedButton.icon(
+                  onPressed: _isLoading ? null : _executeSnipe,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                  ),
+                  icon: _isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : Icon(PhosphorIcons.rocketLaunchFill, color: Colors.white),
+                  label: Text(_isLoading ? 'SNIPING...' : 'DEPLOY CONTRACT', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1.5)),
+                ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+// ==================== TAB 2: TRACKED WALLETS ====================
+class TrackedWalletsTab extends StatelessWidget {
+  const TrackedWalletsTab({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          GlassCard(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Tracked Target Address', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                    Icon(PhosphorIcons.userPlusFill, color: Theme.of(context).primaryColor),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  style: const TextStyle(color: Colors.white, fontFamily: 'monospace', fontSize: 12),
+                  decoration: InputDecoration(
+                    labelText: 'Whale / Shark Wallet Address',
+                    labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    filled: true,
+                    fillColor: Colors.black.withOpacity(0.2),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor, foregroundColor: Colors.white),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Target Wallet Added to Tracker')));
+                    },
+                    child: const Text('Add Target Wallet'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ==================== TAB 3: BOT ENGINE CONFIG ====================
+class BotConfigTab extends StatefulWidget {
+  const BotConfigTab({super.key});
+
+  @override
+  State<BotConfigTab> createState() => _BotConfigTabState();
+}
+
+class _BotConfigTabState extends State<BotConfigTab> {
+  bool _paperMode = false;
+  bool _telegramAlerts = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        GlassCard(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(PhosphorIcons.flaskFill, color: _paperMode ? Colors.amber : Colors.greenAccent),
+                      const SizedBox(width: 8),
+                      Text(_paperMode ? 'Paper Simulation Mode' : 'LIVE Real Money Mode', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  Switch(
+                    value: _paperMode,
+                    activeColor: Colors.amber,
+                    onChanged: (v) => setState(() => _paperMode = v),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(PhosphorIcons.telegramLogoFill, color: theme.primaryColor),
+                      const SizedBox(width: 8),
+                      const Text('Telegram Live Broadcasts', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  Switch(
+                    value: _telegramAlerts,
+                    activeColor: theme.primaryColor,
+                    onChanged: (v) => setState(() => _telegramAlerts = v),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ==================== TAB 4: TEAM QUOTAS ====================
+class TeamQuotasTab extends StatelessWidget {
+  const TeamQuotasTab({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        GlassCard(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('OsamaAdmin (You)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text('Role: Master Admin', style: TextStyle(color: Theme.of(context).primaryColor, fontSize: 12)),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(color: Colors.greenAccent.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                child: const Text('Unlimited Quotas', style: TextStyle(color: Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

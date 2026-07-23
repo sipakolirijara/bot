@@ -16,6 +16,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _hasWallet = false;
   String? _publicAddress;
   List<dynamic> _strategies = [];
+  bool _quickLockEnabled = true;
 
   @override
   void initState() {
@@ -36,7 +37,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       setState(() {
         _isLoading = false;
         if (responses[0]['status'] == 'success') {
-          _hasWallet = responses[0]['data']['has_wallet'];
+          _hasWallet = responses[0]['data']['has_wallet'] ?? false;
           _publicAddress = responses[0]['data']['public_address'];
         }
         if (responses[1]['status'] == 'success') {
@@ -47,66 +48,113 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showPasswordModal() {
-    final passController = TextEditingController();
+    final oldPassController = TextEditingController();
+    final newPassController = TextEditingController();
+    bool obscureOld = true;
+    bool obscureNew = true;
     final theme = Theme.of(context);
     
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 16, right: 16, top: 16),
-        child: GlassCard(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(PhosphorIcons.lockKeyFill, color: Colors.white),
-                  const SizedBox(width: 8),
-                  Text('Update Password', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
-                ],
-              ),
-              const SizedBox(height: 20),
-              TextField(
-                controller: passController,
-                obscureText: true,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: 'New Password',
-                  labelStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant),
-                  prefixIcon: Icon(PhosphorIcons.key, color: theme.colorScheme.onSurfaceVariant),
-                  filled: true,
-                  fillColor: Colors.black.withOpacity(0.2),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 16, right: 16, top: 16),
+          child: GlassCard(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(PhosphorIcons.lockKeyFill, color: Colors.white),
+                    const SizedBox(width: 8),
+                    Text('Update Password', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    gradient: LinearGradient(colors: [theme.primaryColor, const Color(0xFFE024CE)]),
-                  ),
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                const SizedBox(height: 8),
+                Text('Verification required to update account security.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12)),
+                const SizedBox(height: 20),
+                
+                // Old Password Field
+                TextField(
+                  controller: oldPassController,
+                  obscureText: obscureOld,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'Current Password',
+                    labelStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+                    prefixIcon: Icon(PhosphorIcons.lockKey, color: theme.colorScheme.onSurfaceVariant),
+                    suffixIcon: IconButton(
+                      icon: Icon(obscureOld ? PhosphorIcons.eyeClosed : PhosphorIcons.eye, color: theme.colorScheme.onSurfaceVariant),
+                      onPressed: () => setModalState(() => obscureOld = !obscureOld),
                     ),
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      // TODO: Wire up to a future password update endpoint
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password update endpoint required on backend')));
-                    },
-                    child: const Text('Save Security Changes', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1)),
+                    filled: true,
+                    fillColor: Colors.black.withOpacity(0.2),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                   ),
                 ),
-              ),
-              const SizedBox(height: 10),
-            ],
+                const SizedBox(height: 16),
+                
+                // New Password Field
+                TextField(
+                  controller: newPassController,
+                  obscureText: obscureNew,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'New Password',
+                    labelStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+                    prefixIcon: Icon(PhosphorIcons.key, color: theme.colorScheme.onSurfaceVariant),
+                    suffixIcon: IconButton(
+                      icon: Icon(obscureNew ? PhosphorIcons.eyeClosed : PhosphorIcons.eye, color: theme.colorScheme.onSurfaceVariant),
+                      onPressed: () => setModalState(() => obscureNew = !obscureNew),
+                    ),
+                    filled: true,
+                    fillColor: Colors.black.withOpacity(0.2),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                
+                SizedBox(
+                  width: double.infinity,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      gradient: LinearGradient(colors: [theme.primaryColor, const Color(0xFFE024CE)]),
+                    ),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      onPressed: () async {
+                        if (oldPassController.text.isEmpty || newPassController.text.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Both fields are required'), backgroundColor: Colors.red));
+                          return;
+                        }
+                        Navigator.pop(ctx);
+                        final api = context.read<ApiService>();
+                        final res = await api.postEndpoint('auth.php?action=change_password', {
+                          'old_password': oldPassController.text,
+                          'new_password': newPassController.text,
+                        });
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text(res['message'] ?? 'Password update processed'),
+                            backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red,
+                          ));
+                        }
+                      },
+                      child: const Text('Confirm Security Update', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
+            ),
           ),
         ),
       ),
@@ -115,76 +163,80 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _showPrivateKeyModal() {
     final keyController = TextEditingController();
+    bool obscureKey = true;
     final theme = Theme.of(context);
     
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 16, right: 16, top: 16),
-        child: GlassCard(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(PhosphorIcons.walletFill, color: theme.primaryColor),
-                  const SizedBox(width: 8),
-                  Text('Secure Wallet Link', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'AES-256 encrypted instantly on the backend. Never exposed.',
-                style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12),
-              ),
-              const SizedBox(height: 20),
-              TextField(
-                controller: keyController,
-                obscureText: true,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: 'Solana Private Key',
-                  labelStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant),
-                  prefixIcon: Icon(PhosphorIcons.key, color: theme.colorScheme.onSurfaceVariant),
-                  filled: true,
-                  fillColor: Colors.black.withOpacity(0.2),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 16, right: 16, top: 16),
+          child: GlassCard(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(PhosphorIcons.walletFill, color: theme.primaryColor),
+                    const SizedBox(width: 8),
+                    Text('Secure Wallet Link', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    gradient: LinearGradient(colors: [theme.primaryColor, const Color(0xFFE024CE)]),
-                  ),
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                const SizedBox(height: 8),
+                Text('AES-256 encrypted instantly on the backend server.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12)),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: keyController,
+                  obscureText: obscureKey,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'Solana Private Key',
+                    labelStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+                    prefixIcon: Icon(PhosphorIcons.key, color: theme.colorScheme.onSurfaceVariant),
+                    suffixIcon: IconButton(
+                      icon: Icon(obscureKey ? PhosphorIcons.eyeClosed : PhosphorIcons.eye, color: theme.colorScheme.onSurfaceVariant),
+                      onPressed: () => setModalState(() => obscureKey = !obscureKey),
                     ),
-                    onPressed: () async {
-                      Navigator.pop(ctx);
-                      if (keyController.text.trim().isEmpty) return;
-                      setState(() => _isLoading = true);
-                      final api = context.read<ApiService>();
-                      final res = await api.postEndpoint('wallet.php?action=set_key', {'private_key': keyController.text.trim()});
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? ''), backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red));
-                        _fetchData();
-                      }
-                    },
-                    child: const Text('Encrypt & Save', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                    filled: true,
+                    fillColor: Colors.black.withOpacity(0.2),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                   ),
                 ),
-              ),
-              const SizedBox(height: 10),
-            ],
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      gradient: LinearGradient(colors: [theme.primaryColor, const Color(0xFFE024CE)]),
+                    ),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        if (keyController.text.trim().isEmpty) return;
+                        setState(() => _isLoading = true);
+                        final api = context.read<ApiService>();
+                        final res = await api.postEndpoint('wallet.php?action=set_key', {'private_key': keyController.text.trim()});
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? ''), backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red));
+                          _fetchData();
+                        }
+                      },
+                      child: const Text('Encrypt & Save', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
+            ),
           ),
         ),
       ),
@@ -208,47 +260,73 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           // Security Profile Card
           GlassCard(
-            padding: const EdgeInsets.all(24),
-            child: Row(
+            padding: const EdgeInsets.all(20),
+            child: Column(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.05)),
-                  child: Icon(PhosphorIcons.shieldCheckFill, size: 32, color: theme.primaryColor),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.05)),
+                      child: Icon(PhosphorIcons.shieldCheckFill, size: 28, color: theme.primaryColor),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Account Credentials', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text('Manage security & password', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(PhosphorIcons.pencilSimple, color: Colors.white),
+                      onPressed: _showPasswordModal,
+                    )
+                  ],
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Account Security', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text('Manage credentials', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12)),
-                    ],
-                  ),
+                const SizedBox(height: 16),
+                Container(height: 1, color: Colors.white.withOpacity(0.05)),
+                const SizedBox(height: 12),
+                
+                // Toggle Button for Biometric / Quick-Lock Security Preference
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(PhosphorIcons.fingerprint, color: theme.colorScheme.onSurfaceVariant, size: 20),
+                        const SizedBox(width: 8),
+                        Text('Biometric Quick-Lock', style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13)),
+                      ],
+                    ),
+                    Switch(
+                      value: _quickLockEnabled,
+                      activeColor: theme.primaryColor,
+                      onChanged: (val) => setState(() => _quickLockEnabled = val),
+                    ),
+                  ],
                 ),
-                IconButton(
-                  icon: Icon(PhosphorIcons.pencilSimple, color: Colors.white),
-                  onPressed: _showPasswordModal,
-                )
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
           // Execution Wallet Card
           GlassCard(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Icon(PhosphorIcons.walletFill, color: theme.primaryColor, size: 24),
+                    Icon(PhosphorIcons.walletFill, color: theme.primaryColor, size: 22),
                     const SizedBox(width: 8),
                     const Text('Execution Wallet', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 if (_hasWallet) ...[
                   Text('PUBLIC ADDRESS', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 10, letterSpacing: 1.5, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
@@ -275,7 +353,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
@@ -292,9 +370,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
 
-          // Strategies Section
+          // Copy Trading Strategies Section
           Text('COPY TRADING CONFIG', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12, letterSpacing: 1.5, fontWeight: FontWeight.w600)),
           const SizedBox(height: 16),
           if (_strategies.isEmpty)
@@ -319,10 +397,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       isEnabled ? '\$${assign['trade_usd_amount']} | +${assign['tp_percent']}% / -${assign['sl_percent']}%' : 'Unassigned or paused',
                       style: TextStyle(fontSize: 12, color: isEnabled ? Colors.greenAccent : theme.colorScheme.onSurfaceVariant),
                     ),
-                    trailing: Icon(PhosphorIcons.caretRight, color: Colors.white.withOpacity(0.5)),
-                    onTap: () {
-                      // We will implement the premium strategy config modal next!
-                    },
                   ),
                 ),
               );
