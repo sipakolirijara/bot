@@ -4,6 +4,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../services/api_service.dart';
 import '../widgets/balance_card.dart';
 import '../widgets/master_strategy_switch.dart';
+import 'positions_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -23,7 +24,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final List<Widget> pages = [
       _buildHomeTab(theme, apiService.role),
-      const Center(child: Text('Live Positions Polling (Next Phase)')),
+      const PositionsScreen(),
       if (isAdmin) const Center(child: Text('Admin Controls (Next Phase)')),
       const Center(child: Text('Settings')),
     ];
@@ -74,7 +75,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildHomeTab(ThemeData theme, String? role) {
     return RefreshIndicator(
       onRefresh: () async {
-        setState(() {}); // Trigger rebuild to remount widgets and fetch data
+        setState(() {}); 
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
