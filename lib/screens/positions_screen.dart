@@ -456,6 +456,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
                     },
                   ),
                 ),
+        ),
       ],
     );
   }
