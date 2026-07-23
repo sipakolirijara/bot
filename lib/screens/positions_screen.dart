@@ -66,6 +66,24 @@ class _PositionsScreenState extends State<PositionsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Contract copied!'), backgroundColor: Colors.green, duration: Duration(seconds: 2)));
   }
 
+  Future<void> _executeMirrorToReal(int posId) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('⚡ Deploying Real Funds to Jupiter...'), backgroundColor: Colors.purple, duration: Duration(seconds: 2)),
+    );
+    final api = context.read<ApiService>();
+    final res = await api.postEndpoint('trade.php?action=mirror_real', {'id': posId});
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res['message'] ?? (res['status'] == 'ok' ? 'Real Trade Executed Live!' : 'Execution failed')),
+          backgroundColor: res['status'] == 'ok' || res['status'] == 'success' ? Colors.green : Colors.red,
+        ),
+      );
+      _fetchPositions();
+    }
+  }
+
   double? _parseDouble(dynamic value) {
     if (value == null) return null;
     if (value is num) return value.toDouble();
@@ -239,6 +257,9 @@ class _PositionsScreenState extends State<PositionsScreen> {
   }
 
   Widget _buildOpenList(ThemeData theme) {
+    final apiService = context.watch<ApiService>();
+    final isAdmin = apiService.role == 'admin';
+
     if (_openPositions.isEmpty) {
       return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(PhosphorIcons.folderDashed, size: 64, color: Colors.white.withOpacity(0.1)), const SizedBox(height: 16), Text('No active positions', style: TextStyle(color: theme.colorScheme.onSurfaceVariant))]));
     }
@@ -256,6 +277,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
           final isProfit = pnl != null && pnl >= 0;
           final String rawAddress = p['token_address']?.toString() ?? '';
           final double tradeSize = _parseDouble(p['virtual_usd_amount']) ?? 0.0;
+          final bool isReal = p['is_real'] == 1 || p['is_real'] == '1' || p['is_real'] == true;
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 16),
@@ -282,7 +304,11 @@ class _PositionsScreenState extends State<PositionsScreen> {
                           ),
                         ),
                       ),
-                      Text(p['wallet_label'] ?? 'Manual', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 11, fontWeight: FontWeight.bold)),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(color: isReal ? Colors.greenAccent.withOpacity(0.1) : Colors.amber.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+                        child: Text(isReal ? 'LIVE REAL' : 'PAPER', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isReal ? Colors.greenAccent : Colors.amber)),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -326,6 +352,24 @@ class _PositionsScreenState extends State<PositionsScreen> {
                       Expanded(
                         child: Text(_formatDate(p['opened_at']), style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
                       ),
+                      
+                      // 1-TAP MIRROR REAL BUTTON FOR ADMINS ON PAPER TRADES
+                      if (isAdmin && !isReal) ...[
+                        ElevatedButton.icon(
+                          onPressed: () => _executeMirrorToReal(p['id']),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.purpleAccent.withOpacity(0.2),
+                            foregroundColor: Colors.purpleAccent,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            side: const BorderSide(color: Colors.purpleAccent),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          icon: const Icon(PhosphorIcons.lightningFill, size: 14),
+                          label: const Text('GO LIVE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+
                       OutlinedButton.icon(
                         onPressed: () => _showCloseConfirmModal(p),
                         style: OutlinedButton.styleFrom(
@@ -335,7 +379,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
                         icon: const Icon(PhosphorIcons.handPalmFill, size: 16, color: Colors.redAccent),
-                        label: const Text('Close Now', style: TextStyle(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.bold)),
+                        label: const Text('Close', style: TextStyle(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),
