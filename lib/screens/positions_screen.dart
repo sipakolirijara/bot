@@ -266,18 +266,16 @@ class _PositionsScreenState extends State<PositionsScreen> {
   }
 
   Widget _buildClosedList(ThemeData theme) {
-    // 1. Apply the Filter
     final filteredPositions = _closedPositions.where((p) {
       final pnl = _parseDouble(p['pnl_usd']) ?? 0.0;
       if (_historyFilter == 'Profit') return pnl > 0;
       if (_historyFilter == 'Loss') return pnl <= 0;
       if (_historyFilter == 'Manual') return p['close_reason']?.toString().toUpperCase() == 'MANUAL';
-      return true; // 'All'
+      return true;
     }).toList();
 
     return Column(
       children: [
-        // Filter Chips Row
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
@@ -300,8 +298,6 @@ class _PositionsScreenState extends State<PositionsScreen> {
             }).toList(),
           ),
         ),
-        
-        // Ledger List
         Expanded(
           child: filteredPositions.isEmpty
               ? Center(
@@ -335,7 +331,6 @@ class _PositionsScreenState extends State<PositionsScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Top Header: Address & PnL
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
@@ -365,8 +360,6 @@ class _PositionsScreenState extends State<PositionsScreen> {
                               const SizedBox(height: 16),
                               Container(height: 1, color: Colors.white.withOpacity(0.05)),
                               const SizedBox(height: 16),
-                              
-                              // Middle Section: MCAPs & Size
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
@@ -376,8 +369,6 @@ class _PositionsScreenState extends State<PositionsScreen> {
                                 ],
                               ),
                               const SizedBox(height: 16),
-                              
-                              // Footer Section: Date, Time Taken & Reason
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
@@ -409,6 +400,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
                     },
                   ),
                 ),
+        ),
       ],
     );
   }
