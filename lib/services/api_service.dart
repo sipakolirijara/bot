@@ -91,7 +91,7 @@ class ApiService extends ChangeNotifier {
       );
       return jsonDecode(res.body);
     } catch (e) {
-      return {'status': 'error', 'message': 'Network error'};
+      return {'status': 'error', 'message': 'GET Parse Error: $e'};
     }
   }
 
@@ -108,7 +108,8 @@ class ApiService extends ChangeNotifier {
       );
       return jsonDecode(res.body);
     } catch (e) {
-      return {'status': 'error', 'message': 'Network error'};
+      // This will now expose FormatExceptions if PHP spits out HTML or errors instead of JSON
+      return {'status': 'error', 'message': 'API Error: $e'};
     }
   }
 }
