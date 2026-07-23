@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import '../services/api_service.dart';
+import '../widgets/glass_card.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -34,213 +35,158 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (mounted) {
       setState(() {
         _isLoading = false;
-        
-        final walletRes = responses[0];
-        if (walletRes['status'] == 'success') {
-          _hasWallet = walletRes['data']['has_wallet'];
-          _publicAddress = walletRes['data']['public_address'];
+        if (responses[0]['status'] == 'success') {
+          _hasWallet = responses[0]['data']['has_wallet'];
+          _publicAddress = responses[0]['data']['public_address'];
         }
-
-        final stratRes = responses[1];
-        if (stratRes['status'] == 'success') {
-          _strategies = stratRes['data']['strategies'] ?? [];
+        if (responses[1]['status'] == 'success') {
+          _strategies = responses[1]['data']['strategies'] ?? [];
         }
       });
     }
   }
 
-  void _showPrivateKeyModal() {
-    final keyController = TextEditingController();
+  void _showPasswordModal() {
+    final passController = TextEditingController();
+    final theme = Theme.of(context);
     
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      backgroundColor: Colors.transparent,
       builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 20, right: 20, top: 20
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(PhosphorIcons.keyFill, color: Theme.of(context).primaryColor),
-                const SizedBox(width: 8),
-                Text('Secure Wallet Link', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Your private key is AES-256 encrypted instantly on the backend and never exposed.',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: keyController,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: 'Solana Private Key',
-                prefixIcon: Icon(PhosphorIcons.wallet),
-                hintText: 'Base58 string or array format',
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 16, right: 16, top: 16),
+        child: GlassCard(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(PhosphorIcons.lockKeyFill, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Text('Update Password', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
+                ],
               ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+              const SizedBox(height: 20),
+              TextField(
+                controller: passController,
+                obscureText: true,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'New Password',
+                  labelStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+                  prefixIcon: Icon(PhosphorIcons.key, color: theme.colorScheme.onSurfaceVariant),
+                  filled: true,
+                  fillColor: Colors.black.withOpacity(0.2),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                 ),
-                onPressed: () async {
-                  Navigator.pop(ctx);
-                  if (keyController.text.trim().isEmpty) return;
-                  
-                  setState(() => _isLoading = true);
-                  final api = context.read<ApiService>();
-                  final res = await api.postEndpoint('wallet.php?action=set_key', {
-                    'private_key': keyController.text.trim()
-                  });
-                  
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text(res['message'] ?? ''),
-                      backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red,
-                    ));
-                    _fetchData();
-                  }
-                },
-                child: const Text('Encrypt & Save', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
-            ),
-            const SizedBox(height: 20),
-          ],
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    gradient: LinearGradient(colors: [theme.primaryColor, const Color(0xFFE024CE)]),
+                  ),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      // TODO: Wire up to a future password update endpoint
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password update endpoint required on backend')));
+                    },
+                    child: const Text('Save Security Changes', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  void _showStrategyModal(Map<String, dynamic> strat) {
-    final assign = strat['assignment'] ?? {};
-    final usdController = TextEditingController(text: assign['trade_usd_amount']?.toString() ?? '');
-    final tpController = TextEditingController(text: assign['tp_percent']?.toString() ?? '');
-    final slController = TextEditingController(text: assign['sl_percent']?.toString() ?? '');
-    final maxController = TextEditingController(text: assign['max_concurrent_trades']?.toString() ?? '');
-    bool isEnabled = assign['enabled'] == true;
-
+  void _showPrivateKeyModal() {
+    final keyController = TextEditingController();
+    final theme = Theme.of(context);
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => StatefulBuilder(
-        builder: (BuildContext context, StateSetter setModalState) {
-          return Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 20, right: 20, top: 20
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text('Setup: ${strat['label']}', 
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Switch(
-                      value: isEnabled,
-                      activeColor: Colors.green,
-                      onChanged: (val) => setModalState(() => isEnabled = val),
-                    ),
-                  ],
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 16, right: 16, top: 16),
+        child: GlassCard(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(PhosphorIcons.walletFill, color: theme.primaryColor),
+                  const SizedBox(width: 8),
+                  Text('Secure Wallet Link', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'AES-256 encrypted instantly on the backend. Never exposed.',
+                style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: keyController,
+                obscureText: true,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Solana Private Key',
+                  labelStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+                  prefixIcon: Icon(PhosphorIcons.key, color: theme.colorScheme.onSurfaceVariant),
+                  filled: true,
+                  fillColor: Colors.black.withOpacity(0.2),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                 ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: usdController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'Trade USD', prefixIcon: Icon(PhosphorIcons.currencyDollar)),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: maxController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'Max Open', prefixIcon: Icon(PhosphorIcons.hash)),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: tpController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'TP %', prefixIcon: Icon(PhosphorIcons.trendUp, color: Colors.green)),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: slController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'SL %', prefixIcon: Icon(PhosphorIcons.trendDown, color: Colors.red)),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    gradient: LinearGradient(colors: [theme.primaryColor, const Color(0xFFE024CE)]),
+                  ),
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).primaryColor,
-                      foregroundColor: Colors.white,
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                     onPressed: () async {
                       Navigator.pop(ctx);
+                      if (keyController.text.trim().isEmpty) return;
                       setState(() => _isLoading = true);
                       final api = context.read<ApiService>();
-                      final res = await api.postEndpoint('strategies.php?action=assign_wallet', {
-                        'tracked_wallet_id': strat['tracked_wallet_id'],
-                        'trade_usd_amount': usdController.text,
-                        'tp_percent': tpController.text,
-                        'sl_percent': slController.text,
-                        'max_concurrent_trades': maxController.text,
-                        'enabled': isEnabled ? 1 : 0,
-                      });
-                      
+                      final res = await api.postEndpoint('wallet.php?action=set_key', {'private_key': keyController.text.trim()});
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text(res['message'] ?? ''),
-                          backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red,
-                        ));
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? ''), backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red));
                         _fetchData();
                       }
                     },
-                    child: const Text('Save Configuration', style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: const Text('Encrypt & Save', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                   ),
                 ),
-                const SizedBox(height: 20),
-              ],
-            ),
-          );
-        },
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -255,127 +201,133 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     return RefreshIndicator(
       onRefresh: _fetchData,
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Wallet Card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: theme.dividerColor.withOpacity(0.1)),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2))],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+      color: theme.primaryColor,
+      backgroundColor: theme.colorScheme.surface,
+      child: ListView(
+        padding: const EdgeInsets.all(24.0),
+        children: [
+          // Security Profile Card
+          GlassCard(
+            padding: const EdgeInsets.all(24),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.05)),
+                  child: Icon(PhosphorIcons.shieldCheckFill, size: 32, color: theme.primaryColor),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(PhosphorIcons.walletFill, color: theme.primaryColor, size: 24),
-                      const SizedBox(width: 8),
-                      Text('Execution Wallet', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                      const Text('Account Security', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text('Manage credentials', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12)),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  if (_hasWallet) ...[
-                    Text('Public Address', style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              _publicAddress ?? '',
-                              style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
-                            ),
-                          ),
-                          Icon(PhosphorIcons.checkCircleFill, color: Colors.green, size: 18),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                  ] else ...[
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(color: Colors.amber.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                      child: Row(
-                        children: [
-                          Icon(PhosphorIcons.warningCircleFill, color: Colors.amber, size: 20),
-                          const SizedBox(width: 8),
-                          const Expanded(child: Text('No wallet connected. Real trading is disabled.', style: TextStyle(color: Colors.amber, fontSize: 13))),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
+                ),
+                IconButton(
+                  icon: Icon(PhosphorIcons.pencilSimple, color: Colors.white),
+                  onPressed: _showPasswordModal,
+                )
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Execution Wallet Card
+          GlassCard(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(PhosphorIcons.walletFill, color: theme.primaryColor, size: 24),
+                    const SizedBox(width: 8),
+                    const Text('Execution Wallet', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                   ],
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: _showPrivateKeyModal,
-                      icon: Icon(PhosphorIcons.key),
-                      label: Text(_hasWallet ? 'Update Private Key' : 'Connect Wallet'),
+                ),
+                const SizedBox(height: 24),
+                if (_hasWallet) ...[
+                  Text('PUBLIC ADDRESS', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 10, letterSpacing: 1.5, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: Colors.black.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                    child: Row(
+                      children: [
+                        Expanded(child: Text(_publicAddress ?? '', style: const TextStyle(fontFamily: 'monospace', fontSize: 12, color: Colors.white))),
+                        Icon(PhosphorIcons.checkCircleFill, color: Colors.greenAccent, size: 18),
+                      ],
+                    ),
+                  ),
+                ] else ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: Colors.amber.withOpacity(0.1), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.amber.withOpacity(0.3))),
+                    child: Row(
+                      children: [
+                        Icon(PhosphorIcons.warningCircleFill, color: Colors.amber, size: 20),
+                        const SizedBox(width: 8),
+                        const Expanded(child: Text('No wallet connected. Live trading disabled.', style: TextStyle(color: Colors.amber, fontSize: 12))),
+                      ],
                     ),
                   ),
                 ],
-              ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _showPrivateKeyModal,
+                    icon: Icon(PhosphorIcons.key, color: Colors.white),
+                    label: Text(_hasWallet ? 'Update Key' : 'Connect Wallet', style: const TextStyle(color: Colors.white)),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: Colors.white.withOpacity(0.2)),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 24),
+          ),
+          const SizedBox(height: 32),
 
-            // Strategies Header
-            Text('Copy Trading Configurations', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text('Assign specific risk rules to tracked shark wallets.', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-            const SizedBox(height: 16),
-
-            // Strategy List
-            if (_strategies.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(24),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(border: Border.all(color: theme.dividerColor.withOpacity(0.2)), borderRadius: BorderRadius.circular(16)),
-                child: const Text('No tracked wallets found.'),
-              )
-            else
-              ..._strategies.map((strat) {
-                final assign = strat['assignment'] ?? {};
-                final isEnabled = assign['enabled'] == true;
-                
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: isEnabled ? Colors.green.withOpacity(0.3) : theme.dividerColor.withOpacity(0.1)),
-                  ),
+          // Strategies Section
+          Text('COPY TRADING CONFIG', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12, letterSpacing: 1.5, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 16),
+          if (_strategies.isEmpty)
+            GlassCard(child: Center(child: Text('No tracked wallets found.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant))))
+          else
+            ..._strategies.map((strat) {
+              final assign = strat['assignment'] ?? {};
+              final isEnabled = assign['enabled'] == true;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: GlassCard(
+                  padding: EdgeInsets.zero,
                   child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    leading: CircleAvatar(
-                      backgroundColor: isEnabled ? Colors.green.withOpacity(0.1) : theme.colorScheme.surfaceVariant,
-                      child: Icon(PhosphorIcons.robotFill, color: isEnabled ? Colors.green : theme.colorScheme.onSurfaceVariant),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    leading: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(color: isEnabled ? Colors.greenAccent.withOpacity(0.1) : Colors.white.withOpacity(0.05), shape: BoxShape.circle),
+                      child: Icon(PhosphorIcons.robotFill, color: isEnabled ? Colors.greenAccent : theme.colorScheme.onSurfaceVariant),
                     ),
-                    title: Text(strat['label'] ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    title: Text(strat['label'] ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                     subtitle: Text(
-                      isEnabled 
-                          ? '\$${assign['trade_usd_amount']} | +${assign['tp_percent']}% / -${assign['sl_percent']}%'
-                          : 'Currently unassigned or paused',
-                      style: TextStyle(fontSize: 12, color: isEnabled ? Colors.green : theme.colorScheme.onSurfaceVariant),
+                      isEnabled ? '\$${assign['trade_usd_amount']} | +${assign['tp_percent']}% / -${assign['sl_percent']}%' : 'Unassigned or paused',
+                      style: TextStyle(fontSize: 12, color: isEnabled ? Colors.greenAccent : theme.colorScheme.onSurfaceVariant),
                     ),
-                    trailing: Icon(PhosphorIcons.caretRight, size: 16),
-                    onTap: () => _showStrategyModal(strat),
+                    trailing: Icon(PhosphorIcons.caretRight, color: Colors.white.withOpacity(0.5)),
+                    onTap: () {
+                      // We will implement the premium strategy config modal next!
+                    },
                   ),
-                );
-              }).toList(),
-          ],
-        ),
+                ),
+              );
+            }).toList(),
+        ],
       ),
     );
   }
