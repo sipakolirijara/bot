@@ -24,8 +24,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _fetchData();
   }
 
-  Future<void> _fetchData() async {
-    setState(() => _isLoading = true);
+  Future<void> _fetchData({bool silent = false}) async {
+    if (!silent && mounted) setState(() => _isLoading = true);
     final api = context.read<ApiService>();
     
     final responses = await Future.wait([
@@ -165,7 +165,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showStrategyModal(Map<String, dynamic> strat) {
+  void _showStrategyModal(Map<String, dynamic> strat, bool isAdmin, int index) {
     final assign = strat['assignment'] ?? {};
     bool isEnabled = assign['enabled'] == true;
     final usdController = TextEditingController(text: assign['trade_usd_amount']?.toString() ?? '10');
@@ -173,6 +173,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final slController = TextEditingController(text: assign['sl_percent']?.toString() ?? '20');
     final theme = Theme.of(context);
     
+    // ANONYMIZATION LOGIC
+    String displayLabel = isAdmin ? (strat['label'] ?? 'Strategy') : 'Alpha Bot #$index';
+    String displayAddress = isAdmin ? (strat['address'] ?? 'Unknown') : '********** (Encrypted Target)';
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -192,7 +196,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       children: [
                         Icon(PhosphorIcons.robotFill, color: isEnabled ? Colors.greenAccent : theme.colorScheme.onSurfaceVariant),
                         const SizedBox(width: 8),
-                        Text(strat['label'] ?? 'Strategy', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
+                        Text(displayLabel, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
                       ],
                     ),
                     Switch(
@@ -203,7 +207,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text('Address: ${strat['address']}', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 10, fontFamily: 'monospace')),
+                Text('Address: $displayAddress', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 10, fontFamily: 'monospace')),
                 const SizedBox(height: 20),
                 TextField(
                   controller: usdController, keyboardType: TextInputType.number, style: const TextStyle(color: Colors.white),
@@ -236,19 +240,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(vertical: 16)),
                       onPressed: () async {
                         Navigator.pop(ctx);
-                        setState(() => _isLoading = true);
+                        
+                        // 1. OPTIMISTIC UI UPDATE: Instant state change so the user doesn't have to wait.
+                        setState(() {
+                          strat['assignment'] ??= {};
+                          strat['assignment']['enabled'] = isEnabled;
+                          strat['assignment']['trade_usd_amount'] = double.tryParse(usdController.text) ?? 10;
+                          strat['assignment']['tp_percent'] = double.tryParse(tpController.text) ?? 50;
+                          strat['assignment']['sl_percent'] = double.tryParse(slController.text) ?? 20;
+                        });
+
+                        // 2. BACKGROUND SAVE
                         final api = context.read<ApiService>();
-                        // ALIGNED WITH YOUR PHP SCRIPT HERE:
                         final res = await api.postEndpoint('strategies.php?action=assign_wallet', {
-                          'tracked_wallet_id': strat['tracked_wallet_id'],
+                          'tracked_wallet_id': strat['tracked_wallet_id'] ?? strat['wallet_id'],
                           'trade_usd_amount': usdController.text,
                           'tp_percent': tpController.text,
                           'sl_percent': slController.text,
                           'enabled': isEnabled ? 1 : 0,
                         });
+                        
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Strategy updated'), backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red));
-                          _fetchData();
+                          // Silently sync with server to ensure perfect alignment
+                          _fetchData(silent: true);
                         }
                       },
                       child: const Text('Save Execution Strategy', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1)),
@@ -267,6 +282,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isAdmin = context.watch<ApiService>().role == 'admin';
 
     if (_isLoading && _strategies.isEmpty) {
       return const Center(child: CircularProgressIndicator());
@@ -338,9 +354,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           if (_strategies.isEmpty)
             GlassCard(child: Center(child: Text('No tracked wallets found.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant))))
           else
-            ..._strategies.map((strat) {
+            ..._strategies.asMap().entries.map((entry) {
+              int index = entry.key + 1;
+              var strat = entry.value;
               final assign = strat['assignment'] ?? {};
               final isEnabled = assign['enabled'] == true;
+              
+              String displayLabel = isAdmin ? (strat['label'] ?? 'Unknown') : 'Alpha Bot #$index';
+
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: GlassCard(
@@ -352,13 +373,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       decoration: BoxDecoration(color: isEnabled ? Colors.greenAccent.withOpacity(0.1) : Colors.white.withOpacity(0.05), shape: BoxShape.circle),
                       child: Icon(PhosphorIcons.robotFill, color: isEnabled ? Colors.greenAccent : theme.colorScheme.onSurfaceVariant),
                     ),
-                    title: Text(strat['label'] ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                    title: Text(displayLabel, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                     subtitle: Text(
                       isEnabled ? '\$${assign['trade_usd_amount'] ?? 10} | +${assign['tp_percent'] ?? 50}% / -${assign['sl_percent'] ?? 20}%' : 'Unassigned or paused',
                       style: TextStyle(fontSize: 12, color: isEnabled ? Colors.greenAccent : theme.colorScheme.onSurfaceVariant),
                     ),
                     trailing: Icon(PhosphorIcons.caretRight, color: Colors.white.withOpacity(0.5)),
-                    onTap: () => _showStrategyModal(strat),
+                    onTap: () => _showStrategyModal(strat, isAdmin, index),
                   ),
                 ),
               );
