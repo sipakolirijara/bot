@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package0/phosphoricons_flutter/phosphoricons_flutter.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import '../services/api_service.dart';
 import '../widgets/glass_card.dart';
@@ -18,7 +17,6 @@ class AdminScreen extends StatelessWidget {
       child: Column(
         children: [
           const SizedBox(height: 12),
-          // Custom Pill Navigation for Admin Sub-Sections
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16),
             height: 48,
@@ -67,18 +65,14 @@ class AdminScreen extends StatelessWidget {
 // ==================== TAB 1: MANUAL SNIPE ====================
 class AdminSnipeTab extends StatefulWidget {
   const AdminSnipeTab({super.key});
-
-  @override
-  State<AdminSnipeTab> createState() => _AdminSnipeTabState();
+  @override State<AdminSnipeTab> createState() => _AdminSnipeTabState();
 }
-
 class _AdminSnipeTabState extends State<AdminSnipeTab> {
   final _formKey = GlobalKey<FormState>();
   final _tokenController = TextEditingController();
   final _usdController = TextEditingController(text: '10');
   final _tpController = TextEditingController(text: '50');
   final _slController = TextEditingController(text: '20');
-
   double _expectedProfit = 5.00;
   bool _isLoading = false;
 
@@ -88,31 +82,20 @@ class _AdminSnipeTabState extends State<AdminSnipeTab> {
     _usdController.addListener(_updateCalc);
     _tpController.addListener(_updateCalc);
   }
-
   void _updateCalc() {
     final tp = double.tryParse(_tpController.text) ?? 0;
     final size = double.tryParse(_usdController.text) ?? 0;
-    setState(() {
-      _expectedProfit = size * (tp / 100);
-    });
+    setState(() => _expectedProfit = size * (tp / 100));
   }
-
   Future<void> _pasteFromClipboard() async {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
-    if (data != null && data.text != null) {
-      _tokenController.text = data.text!.trim();
-    }
+    if (data != null && data.text != null) _tokenController.text = data.text!.trim();
   }
-
   String? _validateSolanaAddress(String? value) {
     if (value == null || value.trim().isEmpty) return 'Address required';
-    final val = value.trim();
-    if (!RegExp(r'^[1-9A-HJ-NP-Za-km-z]{32,44}$').hasMatch(val)) {
-      return 'Invalid Solana address format';
-    }
+    if (!RegExp(r'^[1-9A-HJ-NP-Za-km-z]{32,44}$').hasMatch(value.trim())) return 'Invalid Solana address';
     return null;
   }
-
   Future<void> _executeSnipe() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
@@ -123,11 +106,10 @@ class _AdminSnipeTabState extends State<AdminSnipeTab> {
       'tp_percent': _tpController.text,
       'sl_percent': _slController.text,
     });
-
     if (mounted) {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(res['message'] ?? (res['status'] == 'success' ? 'Trade deployed!' : 'Execution failed')),
+        content: Text(res['message'] ?? 'Trade deployed!'),
         backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red,
       ));
       if (res['status'] == 'success') _tokenController.clear();
@@ -137,7 +119,6 @@ class _AdminSnipeTabState extends State<AdminSnipeTab> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20.0),
       child: Form(
@@ -149,13 +130,7 @@ class _AdminSnipeTabState extends State<AdminSnipeTab> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Icon(PhosphorIcons.crosshairFill, color: theme.primaryColor),
-                      const SizedBox(width: 8),
-                      const Text('Target Contract', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                    ],
-                  ),
+                  Row(children: [Icon(PhosphorIcons.crosshairFill, color: theme.primaryColor), const SizedBox(width: 8), const Text('Target Contract', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16))]),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _tokenController,
@@ -164,8 +139,7 @@ class _AdminSnipeTabState extends State<AdminSnipeTab> {
                       labelText: 'Solana Token Address',
                       labelStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant),
                       suffixIcon: IconButton(icon: Icon(PhosphorIcons.clipboard, color: theme.primaryColor), onPressed: _pasteFromClipboard),
-                      filled: true,
-                      fillColor: Colors.black.withOpacity(0.2),
+                      filled: true, fillColor: Colors.black.withOpacity(0.2),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                     ),
                     validator: _validateSolanaAddress,
@@ -183,49 +157,13 @@ class _AdminSnipeTabState extends State<AdminSnipeTab> {
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _usdController,
-                          keyboardType: TextInputType.number,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: InputDecoration(
-                            labelText: 'Trade Size (\$)',
-                            labelStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant),
-                            filled: true,
-                            fillColor: Colors.black.withOpacity(0.2),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                          ),
-                        ),
-                      ),
+                      Expanded(child: TextFormField(controller: _usdController, keyboardType: TextInputType.number, style: const TextStyle(color: Colors.white), decoration: InputDecoration(labelText: 'Trade Size (\$)', labelStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant), filled: true, fillColor: Colors.black.withOpacity(0.2), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)))),
                       const SizedBox(width: 12),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _tpController,
-                          keyboardType: TextInputType.number,
-                          style: const TextStyle(color: Colors.greenAccent),
-                          decoration: InputDecoration(
-                            labelText: 'Take Profit (%)',
-                            labelStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant),
-                            filled: true,
-                            fillColor: Colors.black.withOpacity(0.2),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                          ),
-                        ),
-                      ),
+                      Expanded(child: TextFormField(controller: _tpController, keyboardType: TextInputType.number, style: const TextStyle(color: Colors.greenAccent), decoration: InputDecoration(labelText: 'Take Profit (%)', labelStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant), filled: true, fillColor: Colors.black.withOpacity(0.2), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)))),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.03), borderRadius: BorderRadius.circular(12)),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Projected Target Profit:', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12)),
-                        Text('+\$${_expectedProfit.toStringAsFixed(2)}', style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 14)),
-                      ],
-                    ),
-                  ),
+                  Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.white.withOpacity(0.03), borderRadius: BorderRadius.circular(12)), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Projected Target Profit:', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12)), Text('+\$${_expectedProfit.toStringAsFixed(2)}', style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 14))])),
                 ],
               ),
             ),
@@ -233,18 +171,10 @@ class _AdminSnipeTabState extends State<AdminSnipeTab> {
             SizedBox(
               width: double.infinity,
               child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  gradient: LinearGradient(colors: [theme.primaryColor, const Color(0xFFE024CE)]),
-                  boxShadow: [BoxShadow(color: theme.primaryColor.withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 5))],
-                ),
+                decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), gradient: LinearGradient(colors: [theme.primaryColor, const Color(0xFFE024CE)]), boxShadow: [BoxShadow(color: theme.primaryColor.withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 5))]),
                 child: ElevatedButton.icon(
                   onPressed: _isLoading ? null : _executeSnipe,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                  ),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(vertical: 18)),
                   icon: _isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : Icon(PhosphorIcons.rocketLaunchFill, color: Colors.white),
                   label: Text(_isLoading ? 'SNIPING...' : 'DEPLOY CONTRACT', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1.5)),
                 ),
@@ -258,52 +188,61 @@ class _AdminSnipeTabState extends State<AdminSnipeTab> {
 }
 
 // ==================== TAB 2: TRACKED WALLETS ====================
-class TrackedWalletsTab extends StatelessWidget {
+class TrackedWalletsTab extends StatefulWidget {
   const TrackedWalletsTab({super.key});
+  @override State<TrackedWalletsTab> createState() => _TrackedWalletsTabState();
+}
+class _TrackedWalletsTabState extends State<TrackedWalletsTab> {
+  final _walletController = TextEditingController();
+  List<dynamic> _wallets = [];
+  bool _isLoading = false;
+
+  @override void initState() { super.initState(); _fetchWallets(); }
+
+  Future<void> _fetchWallets() async {
+    setState(() => _isLoading = true);
+    final res = await context.read<ApiService>().getEndpoint('admin_wallets.php?action=list');
+    if (mounted) setState(() { _wallets = res['data'] ?? []; _isLoading = false; });
+  }
+
+  Future<void> _addWallet() async {
+    if (_walletController.text.trim().isEmpty) return;
+    setState(() => _isLoading = true);
+    final res = await context.read<ApiService>().postEndpoint('admin_wallets.php?action=add', {'address': _walletController.text.trim()});
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? '')));
+      _walletController.clear();
+      _fetchWallets();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
+    final theme = Theme.of(context);
+    return RefreshIndicator(
+      onRefresh: _fetchWallets,
+      child: ListView(
+        padding: const EdgeInsets.all(20),
         children: [
           GlassCard(
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Tracked Target Address', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                    Icon(PhosphorIcons.userPlusFill, color: Theme.of(context).primaryColor),
-                  ],
-                ),
+                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Track Target Address', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)), Icon(PhosphorIcons.userPlusFill, color: theme.primaryColor)]),
                 const SizedBox(height: 16),
-                TextField(
-                  style: const TextStyle(color: Colors.white, fontFamily: 'monospace', fontSize: 12),
-                  decoration: InputDecoration(
-                    labelText: 'Whale / Shark Wallet Address',
-                    labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-                    filled: true,
-                    fillColor: Colors.black.withOpacity(0.2),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  ),
-                ),
+                TextField(controller: _walletController, style: const TextStyle(color: Colors.white, fontFamily: 'monospace', fontSize: 12), decoration: InputDecoration(labelText: 'Whale / Shark Wallet Address', labelStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant), filled: true, fillColor: Colors.black.withOpacity(0.2), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
                 const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor, foregroundColor: Colors.white),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Target Wallet Added to Tracker')));
-                    },
-                    child: const Text('Add Target Wallet'),
-                  ),
-                ),
+                SizedBox(width: double.infinity, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: theme.primaryColor, foregroundColor: Colors.white), onPressed: _isLoading ? null : _addWallet, child: const Text('Deploy Tracker'))),
               ],
             ),
           ),
+          const SizedBox(height: 24),
+          const Text('ACTIVE TRACKERS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1)),
+          const SizedBox(height: 12),
+          if (_isLoading && _wallets.isEmpty) const Center(child: CircularProgressIndicator())
+          else if (_wallets.isEmpty) const Text('No wallets tracked yet.', style: TextStyle(color: Colors.grey))
+          else ..._wallets.map((w) => Padding(padding: const EdgeInsets.only(bottom: 8.0), child: GlassCard(padding: const EdgeInsets.all(16), child: Text(w['address'] ?? '', style: const TextStyle(color: Colors.white, fontFamily: 'monospace', fontSize: 12))))).toList()
         ],
       ),
     );
@@ -313,11 +252,8 @@ class TrackedWalletsTab extends StatelessWidget {
 // ==================== TAB 3: BOT ENGINE CONFIG ====================
 class BotConfigTab extends StatefulWidget {
   const BotConfigTab({super.key});
-
-  @override
-  State<BotConfigTab> createState() => _BotConfigTabState();
+  @override State<BotConfigTab> createState() => _BotConfigTabState();
 }
-
 class _BotConfigTabState extends State<BotConfigTab> {
   bool _paperMode = false;
   bool _telegramAlerts = true;
@@ -332,41 +268,9 @@ class _BotConfigTabState extends State<BotConfigTab> {
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Icon(PhosphorIcons.flaskFill, color: _paperMode ? Colors.amber : Colors.greenAccent),
-                      const SizedBox(width: 8),
-                      Text(_paperMode ? 'Paper Simulation Mode' : 'LIVE Real Money Mode', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  Switch(
-                    value: _paperMode,
-                    activeColor: Colors.amber,
-                    onChanged: (v) => setState(() => _paperMode = v),
-                  ),
-                ],
-              ),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Row(children: [Icon(PhosphorIcons.flaskFill, color: _paperMode ? Colors.amber : Colors.greenAccent), const SizedBox(width: 8), Text(_paperMode ? 'Paper Simulation Mode' : 'LIVE Real Money Mode', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))]), Switch(value: _paperMode, activeColor: Colors.amber, onChanged: (v) => setState(() => _paperMode = v))]),
               const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Icon(PhosphorIcons.telegramLogoFill, color: theme.primaryColor),
-                      const SizedBox(width: 8),
-                      const Text('Telegram Live Broadcasts', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  Switch(
-                    value: _telegramAlerts,
-                    activeColor: theme.primaryColor,
-                    onChanged: (v) => setState(() => _telegramAlerts = v),
-                  ),
-                ],
-              ),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Row(children: [Icon(PhosphorIcons.telegramLogoFill, color: theme.primaryColor), const SizedBox(width: 8), const Text('Telegram Live Broadcasts', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))]), Switch(value: _telegramAlerts, activeColor: theme.primaryColor, onChanged: (v) => setState(() => _telegramAlerts = v))]),
             ],
           ),
         ),
@@ -376,35 +280,46 @@ class _BotConfigTabState extends State<BotConfigTab> {
 }
 
 // ==================== TAB 4: TEAM QUOTAS ====================
-class TeamQuotasTab extends StatelessWidget {
+class TeamQuotasTab extends StatefulWidget {
   const TeamQuotasTab({super.key});
+  @override State<TeamQuotasTab> createState() => _TeamQuotasTabState();
+}
+class _TeamQuotasTabState extends State<TeamQuotasTab> {
+  List<dynamic> _users = [];
+  bool _isLoading = false;
+
+  @override void initState() { super.initState(); _fetchUsers(); }
+
+  Future<void> _fetchUsers() async {
+    setState(() => _isLoading = true);
+    final res = await context.read<ApiService>().getEndpoint('admin_users.php?action=list');
+    if (mounted) setState(() { _users = res['data'] ?? []; _isLoading = false; });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        GlassCard(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return RefreshIndicator(
+      onRefresh: _fetchUsers,
+      child: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          if (_isLoading && _users.isEmpty) const Center(child: CircularProgressIndicator())
+          else if (_users.isEmpty) const Center(child: Text('No team members found.', style: TextStyle(color: Colors.grey)))
+          else ..._users.map((u) => Padding(
+            padding: const EdgeInsets.only(bottom: 12.0),
+            child: GlassCard(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('OsamaAdmin (You)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                  Text('Role: Master Admin', style: TextStyle(color: Theme.of(context).primaryColor, fontSize: 12)),
+                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(u['username'] ?? 'User', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)), Text('Role: ${u['role']}', style: TextStyle(color: Theme.of(context).primaryColor, fontSize: 12))]),
+                  Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), decoration: BoxDecoration(color: (u['is_active'] == 1 ? Colors.greenAccent : Colors.redAccent).withOpacity(0.1), borderRadius: BorderRadius.circular(8)), child: Text(u['is_active'] == 1 ? 'ACTIVE' : 'PAUSED', style: TextStyle(color: u['is_active'] == 1 ? Colors.greenAccent : Colors.redAccent, fontSize: 11, fontWeight: FontWeight.bold))),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: Colors.greenAccent.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                child: const Text('Unlimited Quotas', style: TextStyle(color: Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-        ),
-      ],
+            ),
+          )).toList()
+        ],
+      ),
     );
   }
 }
