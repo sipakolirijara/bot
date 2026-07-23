@@ -6,6 +6,7 @@ import '../widgets/balance_card.dart';
 import '../widgets/master_strategy_switch.dart';
 import 'positions_screen.dart';
 import 'admin_screen.dart';
+import 'settings_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -27,7 +28,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _buildHomeTab(theme, apiService.role),
       const PositionsScreen(),
       if (isAdmin) const AdminScreen(),
-      const Center(child: Text('Settings')),
+      const SettingsScreen(),
     ];
 
     return Scaffold(
@@ -64,9 +65,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               label: 'Admin',
             ),
           NavigationDestination(
-            icon: Icon(PhosphorIcons.gear),
-            selectedIcon: Icon(PhosphorIcons.gearFill, color: theme.primaryColor),
-            label: 'Settings',
+            icon: Icon(PhosphorIcons.wallet),
+            selectedIcon: Icon(PhosphorIcons.walletFill, color: theme.primaryColor),
+            label: 'Config',
           ),
         ],
       ),
