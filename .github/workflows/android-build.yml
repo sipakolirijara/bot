@@ -88,7 +88,7 @@ jobs:
 
       - name: Configure Manifest
         run: |
-          sed -i 's/android:label=".*"/android:label="kainuwa_academy"/' android/app/src/main/AndroidManifest.xml
+          sed -i 's/android:label=".*"/android:label="Kainuwa Bot"/' android/app/src/main/AndroidManifest.xml
           sed -i '/<manifest/a \    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>' android/app/src/main/AndroidManifest.xml
 
       - name: Generate App Launcher Icons
