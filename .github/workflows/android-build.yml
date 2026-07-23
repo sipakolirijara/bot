@@ -20,13 +20,12 @@ jobs:
         with:
           channel: 'stable'
 
-      # 1. Regenerate Clean Android project with package com.kainuwa.bot
       - name: Regenerate Android Architecture
         run: |
           rm -rf android/
           flutter create --org com.kainuwa --project-name bot .
+          rm -f android/app/build.gradle.kts
 
-      # 2. Generate Deterministic Signing Keystore
       - name: Generate Release Keystore
         run: |
           keytool -genkey -v -keystore android/app/keystore.jks \
@@ -34,7 +33,6 @@ jobs:
             -alias kainuwa_key -storepass kainuwa123 -keypass kainuwa123 \
             -dname "CN=Kainuwa, OU=Dev, O=Kainuwa Digital, L=Abuja, S=FCT, C=NG"
 
-      # 3. Inject Build Gradle Config (Package com.kainuwa.bot & Signing Key)
       - name: Configure Gradle Signing & Application ID
         run: |
           cat << 'gradle_EOF' > android/app/build.gradle
@@ -46,7 +44,7 @@ jobs:
 
           android {
               namespace "com.kainuwa.bot"
-              compileSdk 34
+              compileSdk 36
 
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -60,7 +58,7 @@ jobs:
               defaultConfig {
                   applicationId "com.kainuwa.bot"
                   minSdk 21
-                  targetSdk 34
+                  targetSdk 36
                   versionCode 1
                   versionName "1.0.0"
               }
@@ -88,19 +86,16 @@ jobs:
           }
           gradle_EOF
 
-      # 4. Set Display Name (Kainuwa Bot) & Internet Permissions
       - name: Configure Manifest
         run: |
-          sed -i 's/android:label=".*"/android:label="Kainuwa Bot"/' android/app/src/main/AndroidManifest.xml
+          sed -i 's/android:label=".*"/android:label="kainuwa_academy"/' android/app/src/main/AndroidManifest.xml
           sed -i '/<manifest/a \    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>' android/app/src/main/AndroidManifest.xml
 
-      # 5. Generate Launcher Icons
       - name: Generate App Launcher Icons
         run: |
           flutter pub get
           dart run flutter_launcher_icons
 
-      # 6. Compile Release APK
       - name: Compile Signed Release APK
         run: flutter build apk --release
 

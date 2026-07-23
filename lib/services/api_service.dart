@@ -10,14 +10,12 @@ class ApiService extends ChangeNotifier {
   String? _token;
   String? _role;
   bool _isInit = false;
+  bool _allowManual = false;
 
-  bool _allowManual = false;
-  bool get allowManualTrade => _allowManual;
-  bool _allowManual = false;
-  bool get allowManualTrade => _allowManual;
   bool get isAuthenticated => _token != null && _token!.isNotEmpty;
   bool get isInitialized => _isInit;
   String? get role => _role;
+  bool get allowManualTrade => _allowManual;
 
   ApiService() {
     _initAuth();
@@ -27,8 +25,9 @@ class ApiService extends ChangeNotifier {
     try {
       _token = await _storage.read(key: 'api_token');
       _role = await _storage.read(key: 'user_role');
+      final am = await _storage.read(key: 'allow_manual');
+      _allowManual = am == 'true';
     } catch (e) {
-      // If the Android Keystore corrupted during the app rebuild, wipe it clean.
       await _storage.deleteAll().catchError((_) {});
     }
     _isInit = true;
@@ -46,18 +45,16 @@ class ApiService extends ChangeNotifier {
       final data = jsonDecode(res.body);
       
       if (data['status'] == 'success') {
-        // Aggressively hunt for the token regardless of PHP array structure
         _token = data['token'] ?? data['api_token'] ?? (data['data'] != null ? (data['data']['token'] ?? data['data']['api_token']) : null);
-        _allowManual = (data['allow_manual_trade'] == 1 || data['allow_manual_trade'] == '1' || data['data']?['allow_manual_trade'] == 1);
-        _allowManual = (data['allow_manual_trade'] == 1 || data['allow_manual_trade'] == '1' || data['data']?['allow_manual_trade'] == 1);
+        _allowManual = (data['allow_manual_trade'] == 1 || data['allow_manual_trade'] == '1' || (data['data'] != null && data['data']['allow_manual_trade'] == 1));
         _role = data['role'] ?? (data['data'] != null ? data['data']['role'] : 'user');
 
         if (_token != null && _token!.isNotEmpty) {
           try {
             await _storage.write(key: 'api_token', value: _token);
             await _storage.write(key: 'user_role', value: _role);
+            await _storage.write(key: 'allow_manual', value: _allowManual.toString());
           } catch (e) {
-            // Ignore secure storage errors on mismatched devices, maintain memory session
             await _storage.deleteAll().catchError((_) {});
           }
           notifyListeners();
@@ -74,9 +71,11 @@ class ApiService extends ChangeNotifier {
   Future<void> logout() async {
     _token = null;
     _role = null;
+    _allowManual = false;
     try {
       await _storage.delete(key: 'api_token');
       await _storage.delete(key: 'user_role');
+      await _storage.delete(key: 'allow_manual');
     } catch (e) {
       // Ignore
     }
