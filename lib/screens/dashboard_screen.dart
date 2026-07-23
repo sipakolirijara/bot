@@ -98,10 +98,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   String _formatAddress(dynamic addr) {
-    if (addr == null) return 'Unknown';
+    if (addr == null || addr == 'No Wallet Connected' || addr == 'Loading...') return addr.toString();
     String str = addr.toString();
-    if (str.length <= 10) return str;
-    return '${str.substring(0, 4)}...${str.substring(str.length - 4)}';
+    if (str.length <= 12) return str;
+    return '${str.substring(0, 6)}...${str.substring(str.length - 4)}';
+  }
+
+  String _formatMcap(dynamic v) {
+    if (v == null) return '-';
+    double val = (v is num) ? v.toDouble() : double.tryParse(v.toString()) ?? 0.0;
+    if (val >= 1000000) return '\$${(val / 1000000).toStringAsFixed(2)}M';
+    if (val >= 1000) return '\$${(val / 1000).toStringAsFixed(1)}K';
+    return '\$${val.round()}';
   }
 
   @override
@@ -111,7 +119,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final canTrade = isAdmin || apiService.allowManualTrade;
     final theme = Theme.of(context);
 
-    // Dynamic Navigation Bar setup based on permissions
     final List<Widget> pages = [
       _buildPremiumHome(theme),
       if (canTrade) const TerminalScreen(),
@@ -157,7 +164,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: ListView(
         padding: const EdgeInsets.all(24.0),
         children: [
-          // Header with Copy Wallet Address
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -183,11 +189,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const SizedBox(height: 16),
           
-          // Wallet Address Copy UI
           InkWell(
             onTap: () {
-              Clipboard.setData(ClipboardData(text: _publicAddress));
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Wallet address copied!'), backgroundColor: Colors.green));
+              if (_publicAddress != 'No Wallet Connected' && _publicAddress != 'Loading...') {
+                Clipboard.setData(ClipboardData(text: _publicAddress));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Wallet address copied!'), backgroundColor: Colors.green));
+              }
             },
             borderRadius: BorderRadius.circular(12),
             child: Container(
@@ -196,7 +203,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(children: [Icon(PhosphorIcons.wallet, size: 16, color: theme.primaryColor), const SizedBox(width: 8), Text(_publicAddress, style: const TextStyle(fontFamily: 'monospace', fontSize: 12, color: Colors.white))]),
+                  Row(children: [Icon(PhosphorIcons.wallet, size: 16, color: theme.primaryColor), const SizedBox(width: 8), Text(_formatAddress(_publicAddress), style: const TextStyle(fontFamily: 'monospace', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white))]),
                   Icon(PhosphorIcons.copy, size: 16, color: theme.colorScheme.onSurfaceVariant),
                 ],
               ),
@@ -204,7 +211,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const SizedBox(height: 24),
 
-          // Main Portfolio Card
           GlassCard(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -237,7 +243,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const SizedBox(height: 16),
           
-          // Panic Button
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
@@ -249,12 +254,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               icon: Icon(PhosphorIcons.warningOctagonFill, color: _openPositions.isEmpty ? Colors.white54 : Colors.redAccent),
-              label: Text('CLOSE ALL COPY TRADES', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1, color: _openPositions.isEmpty ? Colors.white54 : Colors.redAccent)),
+              label: Text('CLOSE ALL TRADES', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1, color: _openPositions.isEmpty ? Colors.white54 : Colors.redAccent)),
             ),
           ),
           const SizedBox(height: 24),
 
-          // Mini Ledger (One-Liners)
           if (_openPositions.isNotEmpty) ...[
             Text('LIVE OPEN POSITIONS', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12, letterSpacing: 1.5, fontWeight: FontWeight.w600)),
             const SizedBox(height: 12),
@@ -262,14 +266,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Column(
                 children: _openPositions.map((p) {
-                  final double? cpnl = double.tryParse(p['unrealized_pnl']?.toString() ?? '0');
+                  final double? cpnl = double.tryParse(p['unrealized_pnl']?.toString() ?? '');
                   final bool cpIsProfit = (cpnl ?? 0) >= 0;
                   return ListTile(
                     dense: true,
                     leading: Icon(PhosphorIcons.trendUp, size: 16, color: theme.primaryColor),
-                    title: Text(_formatAddress(p['token_address']), style: const TextStyle(fontFamily: 'monospace', color: Colors.white, fontSize: 13)),
+                    title: Text(_formatAddress(p['token_address']), style: const TextStyle(fontFamily: 'monospace', color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                    subtitle: Text('Size: \$${p['virtual_usd_amount']}  |  MCAP: ${_formatMcap(p['current_mcap'])}', style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant)),
                     trailing: Text(
-                      '${cpIsProfit ? '+' : ''}\$${(cpnl ?? 0).toStringAsFixed(2)}',
+                      cpnl != null ? '${cpIsProfit ? '+' : ''}\$${cpnl.toStringAsFixed(2)}' : '-',
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: cpIsProfit ? Colors.greenAccent : Colors.redAccent),
                     ),
                   );

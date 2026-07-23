@@ -34,29 +34,38 @@ class _PositionsScreenState extends State<PositionsScreen> {
     super.dispose();
   }
 
+  Future<void> _fetchPositions({bool silent = false}) async {
+    if (!silent && mounted) setState(() => _isLoading = true);
+    final api = context.read<ApiService>();
+    final res = await api.getEndpoint('positions.php?action=fetch');
+    
+    if (mounted) {
+      if (res['status'] == 'success') {
+        setState(() {
+          _openPositions = res['open_positions'] ?? [];
+          _closedPositions = res['closed_positions'] ?? [];
+          _isLoading = false;
+        });
+      } else {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   Future<void> _openDexScreener(String address) async {
     final url = Uri.parse('https://dexscreener.com/solana/$address');
     try {
       await launchUrl(url, mode: LaunchMode.inAppWebView);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open DexScreener')));
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open DexScreener')));
     }
   }
 
   void _copyAddress(String address) {
     Clipboard.setData(ClipboardData(text: address));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Contract address copied!'),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 2),
-      ),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Contract copied!'), backgroundColor: Colors.green, duration: Duration(seconds: 2)));
   }
 
-  // --- SAFE PARSERS ---
   double? _parseDouble(dynamic value) {
     if (value == null) return null;
     if (value is num) return value.toDouble();
@@ -67,8 +76,8 @@ class _PositionsScreenState extends State<PositionsScreen> {
   String _formatAddress(dynamic addr) {
     if (addr == null) return 'Unknown Token';
     String str = addr.toString();
-    if (str.length <= 10) return str;
-    return '${str.substring(0, 8)}...${str.substring(str.length - 6)}';
+    if (str.length <= 12) return str;
+    return '${str.substring(0, 6)}...${str.substring(str.length - 4)}';
   }
 
   String _formatMcap(dynamic v) {
@@ -91,52 +100,110 @@ class _PositionsScreenState extends State<PositionsScreen> {
     }
   }
 
-  String _calculateDuration(dynamic openedAtStr, [dynamic closedAtStr]) {
-    if (openedAtStr == null) return '-';
-    try {
-      String oStr = openedAtStr.toString().replaceAll(' ', 'T');
-      DateTime start = DateTime.parse('${oStr}Z').toLocal();
-      DateTime end = DateTime.now();
-
-      if (closedAtStr != null) {
-        String cStr = closedAtStr.toString().replaceAll(' ', 'T');
-        end = DateTime.parse('${cStr}Z').toLocal();
-      }
-          
-      int diffSecs = end.difference(start).inSeconds;
-      if (diffSecs < 60) return '${diffSecs}s';
-      
-      int diffMins = diffSecs ~/ 60;
-      int d = diffMins ~/ 1440;
-      int h = (diffMins % 1440) ~/ 60;
-      int m = diffMins % 60;
-      
-      List<String> res = [];
-      if (d > 0) res.add('${d}d');
-      if (h > 0) res.add('${h}h');
-      if (m > 0) res.add('${m}m');
-      return res.join(' ');
-    } catch (e) {
-      return '-';
-    }
+  void _showEditTargetsModal(Map<String, dynamic> position) {
+    final tpController = TextEditingController(text: position['tp_percent']?.toString() ?? '0');
+    final slController = TextEditingController(text: position['sl_percent']?.toString() ?? '0');
+    final theme = Theme.of(context);
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 16, right: 16, top: 16),
+        child: GlassCard(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(PhosphorIcons.slidersFill, color: theme.primaryColor),
+                  const SizedBox(width: 8),
+                  Text('Edit Targets', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text('Contract: ${_formatAddress(position['token_address'])}', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12, fontFamily: 'monospace')),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: tpController, keyboardType: TextInputType.number, style: const TextStyle(color: Colors.greenAccent),
+                      decoration: InputDecoration(labelText: 'Take Profit (%)', labelStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant), prefixIcon: Icon(PhosphorIcons.trendUp, color: Colors.greenAccent), filled: true, fillColor: Colors.black.withOpacity(0.2), border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: slController, keyboardType: TextInputType.number, style: const TextStyle(color: Colors.redAccent),
+                      decoration: InputDecoration(labelText: 'Stop Loss (%)', labelStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant), prefixIcon: Icon(PhosphorIcons.trendDown, color: Colors.redAccent), filled: true, fillColor: Colors.black.withOpacity(0.2), border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: Container(
+                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), gradient: LinearGradient(colors: [theme.primaryColor, const Color(0xFFE024CE)])),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, padding: const EdgeInsets.symmetric(vertical: 16)),
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      final api = context.read<ApiService>();
+                      final res = await api.postEndpoint('trade.php?action=update_tpsl', {
+                        'id': position['id'],
+                        'tp_percent': tpController.text,
+                        'sl_percent': slController.text,
+                      });
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Targets updated'), backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red));
+                        _fetchPositions();
+                      }
+                    },
+                    child: const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
-  Future<void> _fetchPositions({bool silent = false}) async {
-    if (!silent && mounted) setState(() => _isLoading = true);
-    final api = context.read<ApiService>();
-    final res = await api.getEndpoint('positions.php?action=fetch');
-    
-    if (mounted) {
-      if (res['status'] == 'success') {
-        setState(() {
-          _openPositions = res['open_positions'] ?? [];
-          _closedPositions = res['closed_positions'] ?? [];
-          _isLoading = false;
-        });
-      } else {
-        setState(() => _isLoading = false);
-      }
-    }
+  void _showCloseConfirmModal(Map<String, dynamic> position) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: const Text('Confirm Manual Exit', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Text('Are you sure you want to close position ${_formatAddress(position['token_address'])} at the current market cap?', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Closing position...'), backgroundColor: Colors.amber));
+              final res = await context.read<ApiService>().postEndpoint('trade.php?action=close_position', {'id': position['id']});
+              if (mounted) {
+                if (res['status'] == 'closed' || res['status'] == 'success' || res['real'] == true) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Position successfully closed.'), backgroundColor: Colors.green));
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['error'] ?? res['message'] ?? 'Failed to close'), backgroundColor: Colors.red));
+                }
+                _fetchPositions();
+              }
+            },
+            child: const Text('Exit Now'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -148,39 +215,23 @@ class _PositionsScreenState extends State<PositionsScreen> {
       child: Column(
         children: [
           const SizedBox(height: 16),
-          // Premium Pill Tab Bar
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 24),
             height: 50,
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(25),
-              border: Border.all(color: Colors.white.withOpacity(0.05)),
-            ),
+            decoration: BoxDecoration(color: Colors.black.withOpacity(0.3), borderRadius: BorderRadius.circular(25), border: Border.all(color: Colors.white.withOpacity(0.05))),
             child: TabBar(
-              indicatorSize: TabBarIndicatorSize.tab,
-              dividerColor: Colors.transparent,
-              indicator: BoxDecoration(
-                borderRadius: BorderRadius.circular(25),
-                gradient: LinearGradient(colors: [theme.primaryColor, const Color(0xFFE024CE)]),
-                boxShadow: [BoxShadow(color: theme.primaryColor.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4))],
-              ),
-              labelColor: Colors.white,
-              unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
+              indicatorSize: TabBarIndicatorSize.tab, dividerColor: Colors.transparent,
+              indicator: BoxDecoration(borderRadius: BorderRadius.circular(25), gradient: LinearGradient(colors: [theme.primaryColor, const Color(0xFFE024CE)]), boxShadow: [BoxShadow(color: theme.primaryColor.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4))]),
+              labelColor: Colors.white, unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
               labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1),
               tabs: const [Tab(text: 'LIVE TRADES'), Tab(text: 'HISTORY')],
             ),
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: _isLoading 
+            child: _isLoading && _openPositions.isEmpty && _closedPositions.isEmpty
                 ? const Center(child: CircularProgressIndicator())
-                : TabBarView(
-                    children: [
-                      _buildOpenList(theme),
-                      _buildClosedList(theme),
-                    ],
-                  ),
+                : TabBarView(children: [_buildOpenList(theme), _buildClosedList(theme)]),
           ),
         ],
       ),
@@ -189,16 +240,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
 
   Widget _buildOpenList(ThemeData theme) {
     if (_openPositions.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(PhosphorIcons.scan, size: 64, color: Colors.white.withOpacity(0.1)),
-            const SizedBox(height: 16),
-            Text('No active positions', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-          ],
-        ),
-      );
+      return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(PhosphorIcons.folderDashed, size: 64, color: Colors.white.withOpacity(0.1)), const SizedBox(height: 16), Text('No active positions', style: TextStyle(color: theme.colorScheme.onSurfaceVariant))]));
     }
 
     return RefreshIndicator(
@@ -213,6 +255,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
           final pnl = _parseDouble(p['unrealized_pnl']);
           final isProfit = pnl != null && pnl >= 0;
           final String rawAddress = p['token_address']?.toString() ?? '';
+          final double tradeSize = _parseDouble(p['virtual_usd_amount']) ?? 0.0;
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 16),
@@ -239,21 +282,61 @@ class _PositionsScreenState extends State<PositionsScreen> {
                           ),
                         ),
                       ),
-                      IconButton(
-                        icon: Icon(PhosphorIcons.chartLineUp, color: Colors.white),
-                        tooltip: 'View on DexScreener',
-                        onPressed: () => _openDexScreener(rawAddress),
-                        style: IconButton.styleFrom(backgroundColor: Colors.white.withOpacity(0.05)),
-                      ),
+                      Text(p['wallet_label'] ?? 'Manual', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 11, fontWeight: FontWeight.bold)),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('ENTRY MCAP', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 10, letterSpacing: 1)), const SizedBox(height: 4), Text(_formatMcap(p['entry_mcap']), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16))]),
-                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('LIVE MCAP', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 10, letterSpacing: 1)), const SizedBox(height: 4), Text(_formatMcap(p['current_mcap']), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16))]),
+                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('ENTRY MCAP', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 10, letterSpacing: 1)), const SizedBox(height: 4), Text(_formatMcap(p['entry_mcap']), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14))]),
+                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('LIVE MCAP', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 10, letterSpacing: 1)), const SizedBox(height: 4), Text(_formatMcap(p['current_mcap']), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14))]),
                       Column(crossAxisAlignment: CrossAxisAlignment.end, children: [Text('UNREALIZED', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 10, letterSpacing: 1)), const SizedBox(height: 4), Text(pnl != null ? '${isProfit ? '+' : ''}\$${pnl.toStringAsFixed(2)}' : '-', style: TextStyle(fontWeight: FontWeight.bold, color: isProfit ? Colors.greenAccent : Colors.redAccent, fontSize: 16))]),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Container(height: 1, color: Colors.white.withOpacity(0.05)),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('TRADE SIZE', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 10, letterSpacing: 1)), const SizedBox(height: 4), Text('\$${tradeSize.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14))]),
+                      InkWell(
+                        onTap: () => _showEditTargetsModal(p),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.white.withOpacity(0.1))),
+                          child: Row(
+                            children: [
+                              Icon(PhosphorIcons.pencilSimple, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                              const SizedBox(width: 6),
+                              Text('+${p['tp_percent']}%', style: const TextStyle(color: Colors.greenAccent, fontSize: 12, fontWeight: FontWeight.bold)),
+                              Text(' / ', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12)),
+                              Text('-${p['sl_percent']}%', style: const TextStyle(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(_formatDate(p['opened_at']), style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: () => _showCloseConfirmModal(p),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: Colors.redAccent.withOpacity(0.5)),
+                          backgroundColor: Colors.redAccent.withOpacity(0.1),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        icon: const Icon(PhosphorIcons.handPalmFill, size: 16, color: Colors.redAccent),
+                        label: const Text('Close Now', style: TextStyle(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.bold)),
+                      ),
                     ],
                   ),
                 ],
@@ -290,9 +373,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
                   selectedColor: theme.primaryColor.withOpacity(0.8),
                   backgroundColor: Colors.white.withOpacity(0.05),
                   side: BorderSide(color: isSelected ? theme.primaryColor : Colors.transparent),
-                  onSelected: (selected) {
-                    if (selected) setState(() => _historyFilter = filter);
-                  },
+                  onSelected: (selected) { if (selected) setState(() => _historyFilter = filter); },
                 ),
               );
             }).toList(),
@@ -300,16 +381,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
         ),
         Expanded(
           child: filteredPositions.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(PhosphorIcons.receipt, size: 64, color: Colors.white.withOpacity(0.1)),
-                      const SizedBox(height: 16),
-                      Text('No trades match this filter', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-                    ],
-                  ),
-                )
+              ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(PhosphorIcons.receipt, size: 64, color: Colors.white.withOpacity(0.1)), const SizedBox(height: 16), Text('No trades match this filter', style: TextStyle(color: theme.colorScheme.onSurfaceVariant))]))
               : RefreshIndicator(
                   onRefresh: () => _fetchPositions(),
                   color: theme.primaryColor,
@@ -322,7 +394,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
                       final pnl = _parseDouble(p['pnl_usd']) ?? 0.0;
                       final isProfit = pnl >= 0;
                       final String rawAddress = p['token_address']?.toString() ?? '';
-                      final String sizeUsd = _parseDouble(p['trade_usd'])?.toStringAsFixed(2) ?? '0.00';
+                      final String sizeUsd = _parseDouble(p['virtual_usd_amount'] ?? p['trade_usd'])?.toStringAsFixed(2) ?? '0.00';
 
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 16),
@@ -349,10 +421,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
                                     children: [
                                       Text('${isProfit ? '+' : ''}\$${pnl.toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: isProfit ? Colors.greenAccent : Colors.redAccent)),
                                       const SizedBox(width: 12),
-                                      InkWell(
-                                        onTap: () => _openDexScreener(rawAddress),
-                                        child: Icon(PhosphorIcons.chartLineUp, size: 20, color: theme.primaryColor),
-                                      ),
+                                      InkWell(onTap: () => _openDexScreener(rawAddress), child: Icon(PhosphorIcons.chartLineUp, size: 20, color: theme.primaryColor)),
                                     ],
                                   ),
                                 ],
@@ -372,20 +441,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Row(
-                                    children: [
-                                      Icon(PhosphorIcons.calendarBlank, size: 14, color: theme.colorScheme.onSurfaceVariant),
-                                      const SizedBox(width: 4),
-                                      Text(_formatDate(p['opened_at']), style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
-                                    ],
-                                  ),
-                                  Row(
-                                    children: [
-                                      Icon(PhosphorIcons.clock, size: 14, color: theme.colorScheme.onSurfaceVariant),
-                                      const SizedBox(width: 4),
-                                      Text(_calculateDuration(p['opened_at'], p['closed_at']), style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
-                                    ],
-                                  ),
+                                  Text(_formatDate(p['opened_at']), style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(6)),
@@ -400,7 +456,6 @@ class _PositionsScreenState extends State<PositionsScreen> {
                     },
                   ),
                 ),
-        ),
       ],
     );
   }
