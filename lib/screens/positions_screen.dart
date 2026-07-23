@@ -19,6 +19,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
   bool _isLoading = true;
   List<dynamic> _openPositions = [];
   List<dynamic> _closedPositions = [];
+  String _historyFilter = 'All';
 
   @override
   void initState() {
@@ -76,6 +77,48 @@ class _PositionsScreenState extends State<PositionsScreen> {
     if (val >= 1000000) return '\$${(val / 1000000).toStringAsFixed(2)}M';
     if (val >= 1000) return '\$${(val / 1000).toStringAsFixed(1)}K';
     return '\$${val.round()}';
+  }
+
+  String _formatDate(dynamic dateStr) {
+    if (dateStr == null) return '-';
+    try {
+      String dStr = dateStr.toString().replaceAll(' ', 'T');
+      DateTime dt = DateTime.parse('${dStr}Z').toLocal();
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return '${months[dt.month - 1]} ${dt.day}, ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return dateStr.toString();
+    }
+  }
+
+  String _calculateDuration(dynamic openedAtStr, [dynamic closedAtStr]) {
+    if (openedAtStr == null) return '-';
+    try {
+      String oStr = openedAtStr.toString().replaceAll(' ', 'T');
+      DateTime start = DateTime.parse('${oStr}Z').toLocal();
+      DateTime end = DateTime.now();
+
+      if (closedAtStr != null) {
+        String cStr = closedAtStr.toString().replaceAll(' ', 'T');
+        end = DateTime.parse('${cStr}Z').toLocal();
+      }
+          
+      int diffSecs = end.difference(start).inSeconds;
+      if (diffSecs < 60) return '${diffSecs}s';
+      
+      int diffMins = diffSecs ~/ 60;
+      int d = diffMins ~/ 1440;
+      int h = (diffMins % 1440) ~/ 60;
+      int m = diffMins % 60;
+      
+      List<String> res = [];
+      if (d > 0) res.add('${d}d');
+      if (h > 0) res.add('${h}h');
+      if (m > 0) res.add('${m}m');
+      return res.join(' ');
+    } catch (e) {
+      return '-';
+    }
   }
 
   Future<void> _fetchPositions({bool silent = false}) async {
@@ -223,76 +266,150 @@ class _PositionsScreenState extends State<PositionsScreen> {
   }
 
   Widget _buildClosedList(ThemeData theme) {
-    if (_closedPositions.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(PhosphorIcons.receipt, size: 64, color: Colors.white.withOpacity(0.1)),
-            const SizedBox(height: 16),
-            Text('Ledger is empty', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-          ],
+    // 1. Apply the Filter
+    final filteredPositions = _closedPositions.where((p) {
+      final pnl = _parseDouble(p['pnl_usd']) ?? 0.0;
+      if (_historyFilter == 'Profit') return pnl > 0;
+      if (_historyFilter == 'Loss') return pnl <= 0;
+      if (_historyFilter == 'Manual') return p['close_reason']?.toString().toUpperCase() == 'MANUAL';
+      return true; // 'All'
+    }).toList();
+
+    return Column(
+      children: [
+        // Filter Chips Row
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          child: Row(
+            children: ['All', 'Profit', 'Loss', 'Manual'].map((filter) {
+              final isSelected = _historyFilter == filter;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Text(filter, style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.white : theme.colorScheme.onSurfaceVariant)),
+                  selected: isSelected,
+                  selectedColor: theme.primaryColor.withOpacity(0.8),
+                  backgroundColor: Colors.white.withOpacity(0.05),
+                  side: BorderSide(color: isSelected ? theme.primaryColor : Colors.transparent),
+                  onSelected: (selected) {
+                    if (selected) setState(() => _historyFilter = filter);
+                  },
+                ),
+              );
+            }).toList(),
+          ),
         ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: () => _fetchPositions(),
-      color: theme.primaryColor,
-      backgroundColor: theme.colorScheme.surface,
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-        itemCount: _closedPositions.length,
-        itemBuilder: (context, index) {
-          final p = _closedPositions[index];
-          final pnl = _parseDouble(p['pnl_usd']) ?? 0.0;
-          final isProfit = pnl >= 0;
-          final String rawAddress = p['token_address']?.toString() ?? '';
-
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: GlassCard(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        
+        // Ledger List
+        Expanded(
+          child: filteredPositions.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      InkWell(
-                        onTap: () => _copyAddress(rawAddress),
-                        child: Row(
-                          children: [
-                            Text(_formatAddress(rawAddress), style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white)),
-                            const SizedBox(width: 4),
-                            Icon(PhosphorIcons.copy, size: 12, color: theme.colorScheme.onSurfaceVariant),
-                          ],
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          Text('${isProfit ? '+' : ''}\$${pnl.toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isProfit ? Colors.greenAccent : Colors.redAccent)),
-                          const SizedBox(width: 12),
-                          InkWell(
-                            onTap: () => _openDexScreener(rawAddress),
-                            child: Icon(PhosphorIcons.arrowSquareOut, size: 18, color: theme.primaryColor),
-                          ),
-                        ],
-                      ),
+                      Icon(PhosphorIcons.receipt, size: 64, color: Colors.white.withOpacity(0.1)),
+                      const SizedBox(height: 16),
+                      Text('No trades match this filter', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(6)),
-                    child: Text(p['close_reason']?.toString() ?? 'MANUAL CLOSE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurfaceVariant, letterSpacing: 1)),
+                )
+              : RefreshIndicator(
+                  onRefresh: () => _fetchPositions(),
+                  color: theme.primaryColor,
+                  backgroundColor: theme.colorScheme.surface,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                    itemCount: filteredPositions.length,
+                    itemBuilder: (context, index) {
+                      final p = filteredPositions[index];
+                      final pnl = _parseDouble(p['pnl_usd']) ?? 0.0;
+                      final isProfit = pnl >= 0;
+                      final String rawAddress = p['token_address']?.toString() ?? '';
+                      final String sizeUsd = _parseDouble(p['trade_usd'])?.toStringAsFixed(2) ?? '0.00';
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: GlassCard(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Top Header: Address & PnL
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  InkWell(
+                                    onTap: () => _copyAddress(rawAddress),
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Row(
+                                      children: [
+                                        Text(_formatAddress(rawAddress), style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white)),
+                                        const SizedBox(width: 6),
+                                        Icon(PhosphorIcons.copy, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                                      ],
+                                    ),
+                                  ),
+                                  Row(
+                                    children: [
+                                      Text('${isProfit ? '+' : ''}\$${pnl.toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: isProfit ? Colors.greenAccent : Colors.redAccent)),
+                                      const SizedBox(width: 12),
+                                      InkWell(
+                                        onTap: () => _openDexScreener(rawAddress),
+                                        child: Icon(PhosphorIcons.chartLineUp, size: 20, color: theme.primaryColor),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Container(height: 1, color: Colors.white.withOpacity(0.05)),
+                              const SizedBox(height: 16),
+                              
+                              // Middle Section: MCAPs & Size
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('ENTRY MCAP', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 10, letterSpacing: 1)), const SizedBox(height: 4), Text(_formatMcap(p['entry_mcap']), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14))]),
+                                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('EXIT MCAP', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 10, letterSpacing: 1)), const SizedBox(height: 4), Text(_formatMcap(p['close_mcap'] ?? p['current_mcap']), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14))]),
+                                  Column(crossAxisAlignment: CrossAxisAlignment.end, children: [Text('TRADE SIZE', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 10, letterSpacing: 1)), const SizedBox(height: 4), Text('\$$sizeUsd', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14))]),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              
+                              // Footer Section: Date, Time Taken & Reason
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(PhosphorIcons.calendarBlank, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                                      const SizedBox(width: 4),
+                                      Text(_formatDate(p['opened_at']), style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
+                                    ],
+                                  ),
+                                  Row(
+                                    children: [
+                                      Icon(PhosphorIcons.clock, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                                      const SizedBox(width: 4),
+                                      Text(_calculateDuration(p['opened_at'], p['closed_at']), style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
+                                    ],
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(6)),
+                                    child: Text(p['close_reason']?.toString() ?? 'MANUAL', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurfaceVariant, letterSpacing: 1)),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
+                ),
+      ],
     );
   }
 }
