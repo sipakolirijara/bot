@@ -73,10 +73,9 @@ class _BotEngineTabState extends State<BotEngineTab> {
   Future<void> _saveSettings() async {
     setState(() => _isSaving = true);
     
-    // Convert minutes back to seconds for the backend
     final pollMins = double.tryParse(_pollMinsCtrl.text) ?? 1.0;
     int pollSecs = (pollMins * 60).round();
-    if (pollSecs < 15) pollSecs = 15; // 15s hard floor
+    if (pollSecs < 15) pollSecs = 15;
 
     final payload = {
       'poll_interval_seconds': pollSecs.toString(),
@@ -146,7 +145,6 @@ class _BotEngineTabState extends State<BotEngineTab> {
     return ListView(
       padding: const EdgeInsets.all(24.0),
       children: [
-        // 1. Master Toggles
         GlassCard(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -166,7 +164,7 @@ class _BotEngineTabState extends State<BotEngineTab> {
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 activeColor: Colors.redAccent,
-                title: Row(children: [Icon(PhosphorIcons.warningCircleFill, color: Colors.redAccent, size: 16), const SizedBox(width: 6), const Text('Live REAL Trading', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 14))]),
+                title: Row(children: const [Icon(PhosphorIcons.warningCircleFill, color: Colors.redAccent, size: 16), SizedBox(width: 6), Text('Live REAL Trading', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 14))]),
                 subtitle: Text('Use real master wallet funds on Jupiter', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12)),
                 value: _liveMode,
                 onChanged: (val) => setState(() => _liveMode = val),
@@ -185,13 +183,12 @@ class _BotEngineTabState extends State<BotEngineTab> {
         ),
         const SizedBox(height: 16),
 
-        // 2. Real Trading Limits
         GlassCard(
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(children: [Icon(PhosphorIcons.shieldWarningFill, color: Colors.redAccent), const SizedBox(width: 8), const Text('Real Trading Risk Limits', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 16))]),
+              Row(children: const [Icon(PhosphorIcons.shieldWarningFill, color: Colors.redAccent), SizedBox(width: 8), Text('Real Trading Risk Limits', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 16))]),
               const SizedBox(height: 20),
               _buildTextField('REAL BASE SIZE (\$)', _realBaseSizeCtrl, PhosphorIcons.currencyDollar),
               _buildTextField('MAX PER TRADE (\$)', _realMaxTradeCtrl, PhosphorIcons.prohibit),
@@ -201,7 +198,6 @@ class _BotEngineTabState extends State<BotEngineTab> {
         ),
         const SizedBox(height: 16),
 
-        // 3. Scanning & Paper Defaults
         GlassCard(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -228,7 +224,6 @@ class _BotEngineTabState extends State<BotEngineTab> {
         ),
         const SizedBox(height: 16),
 
-        // 4. Stablecoin Whitelist
         GlassCard(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -244,7 +239,6 @@ class _BotEngineTabState extends State<BotEngineTab> {
         ),
         const SizedBox(height: 32),
 
-        // Save Button
         SizedBox(
           width: double.infinity,
           height: 56,
