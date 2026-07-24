@@ -222,6 +222,67 @@ class _TrackedWalletsTabState extends State<TrackedWalletsTab> {
     }
   }
 
+  Future<void> _showEditModal(dynamic w) async {
+    final lblCtrl = TextEditingController(text: w['label']);
+    final addrCtrl = TextEditingController(text: w['address']);
+    bool isSaving = false;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          backgroundColor: const Color(0xFF13131A),
+          title: Row(children: [Icon(PhosphorIcons.pencilSimpleFill, color: Theme.of(context).primaryColor), const SizedBox(width: 8), const Text('Edit Tracker', style: TextStyle(color: Colors.white, fontSize: 16))]),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: lblCtrl, style: const TextStyle(color: Colors.white), decoration: InputDecoration(labelText: 'Label', filled: true, fillColor: Colors.black26, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
+              const SizedBox(height: 12),
+              TextField(controller: addrCtrl, style: const TextStyle(color: Colors.white, fontSize: 12), decoration: InputDecoration(labelText: 'Address', filled: true, fillColor: Colors.black26, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: Colors.white54))),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor),
+              onPressed: isSaving ? null : () async {
+                setStateDialog(() => isSaving = true);
+                final res = await this.context.read<ApiService>().postEndpoint('admin_wallets.php?action=edit', {'id': w['id'], 'label': lblCtrl.text.trim(), 'address': addrCtrl.text.trim()});
+                if (mounted) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(this.context).showSnackBar(SnackBar(content: Text(res['message'] ?? ''), backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red));
+                  _fetchWallets();
+                }
+              },
+              child: isSaving ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white)) : const Text('Save', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showDeleteModal(int id) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF13131A),
+        title: const Row(children: [Icon(PhosphorIcons.warningCircleFill, color: Colors.redAccent), SizedBox(width: 8), Text('Remove Tracker?', style: TextStyle(color: Colors.white, fontSize: 16))]),
+        content: const Text('Are you sure you want to stop tracking this wallet? You must sync the webhook afterward.', style: TextStyle(color: Colors.white70, fontSize: 13)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel', style: TextStyle(color: Colors.white54))),
+          ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent), onPressed: () => Navigator.pop(ctx, true), child: const Text('Remove', style: TextStyle(color: Colors.white))),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      final res = await context.read<ApiService>().postEndpoint('admin_wallets.php?action=delete', {'id': id});
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? ''), backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red));
+      _fetchWallets();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -279,7 +340,18 @@ class _TrackedWalletsTabState extends State<TrackedWalletsTab> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(w['label'] ?? 'Unknown', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(child: Text(w['label'] ?? 'Unknown', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14))),
+                        Row(
+                          children: [
+                            IconButton(icon: const Icon(PhosphorIcons.pencilSimple, color: Colors.white54, size: 18), onPressed: () => _showEditModal(w), constraints: const BoxConstraints(), padding: const EdgeInsets.symmetric(horizontal: 4)),
+                            IconButton(icon: const Icon(PhosphorIcons.trash, color: Colors.redAccent, size: 18), onPressed: () => _showDeleteModal(w['id']), constraints: const BoxConstraints(), padding: const EdgeInsets.symmetric(horizontal: 4)),
+                          ],
+                        )
+                      ],
+                    ),
                     const SizedBox(height: 6),
                     Text(w['address'] ?? '', style: const TextStyle(color: Colors.white70, fontFamily: 'monospace', fontSize: 11)),
                     const SizedBox(height: 12),

@@ -288,11 +288,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   if (!_allowTelegram)
                     const Text('Admin has disabled personal alerts.', style: TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.bold))
                   else ...[
-                    const Text('Paste your Telegram Chat ID below.', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                    const SizedBox(height: 12),
+                    const Text('Search for @userinfobot on Telegram and send /start. Copy the ID it gives you and paste it below.', style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.5)),
+                    const SizedBox(height: 16),
                     Row(
                       children: [
-                        Expanded(child: TextField(controller: _telegramCtrl, style: const TextStyle(color: Colors.white, fontSize: 13), decoration: InputDecoration(hintText: 'Chat ID', hintStyle: const TextStyle(color: Colors.white38), filled: true, fillColor: Colors.black26, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)))),
+                        Expanded(child: TextField(controller: _telegramCtrl, style: const TextStyle(color: Colors.white, fontSize: 13), decoration: InputDecoration(hintText: 'e.g., 123456789', hintStyle: const TextStyle(color: Colors.white38), filled: true, fillColor: Colors.black26, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)))),
                         const SizedBox(width: 12),
                         ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent, padding: const EdgeInsets.symmetric(vertical: 14)), onPressed: _saveTelegramId, child: const Text('Save', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)))
                       ],
