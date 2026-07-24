@@ -64,7 +64,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Icon(PhosphorIcons.chartLineUpBold, size: 48, color: Colors.white),
                     ),
                     const SizedBox(height: 32),
-                    Text('KAINUWA ACADEMY', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900, letterSpacing: 2, color: Colors.white)),
+                    Text('KAINUWA BOT', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900, letterSpacing: 2, color: Colors.white)),
                     const SizedBox(height: 8),
                     Text('Enterprise Trading Terminal', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant, letterSpacing: 1)),
                     const SizedBox(height: 48),

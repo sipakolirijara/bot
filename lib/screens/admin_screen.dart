@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import '../services/api_service.dart';
 import '../widgets/glass_card.dart';
+import '../widgets/bot_engine_tab.dart'; // Import the new comprehensive settings tab
 
 class AdminScreen extends StatelessWidget {
   const AdminScreen({super.key});
@@ -49,7 +50,7 @@ class AdminScreen extends StatelessWidget {
             child: TabBarView(
               children: [
                 TrackedWalletsTab(),
-                BotConfigTab(),
+                BotEngineTab(), // Now using the comprehensive UI we built!
                 TeamQuotasTab(),
               ],
             ),
@@ -154,69 +155,6 @@ class _TrackedWalletsTabState extends State<TrackedWalletsTab> {
             )).toList()
         ],
       ),
-    );
-  }
-}
-
-// ==================== TAB 2: BOT ENGINE CONFIG ====================
-class BotConfigTab extends StatefulWidget {
-  const BotConfigTab({super.key});
-  @override State<BotConfigTab> createState() => _BotConfigTabState();
-}
-
-class _BotConfigTabState extends State<BotConfigTab> {
-  bool _paperMode = false;
-  bool _telegramAlerts = true;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        GlassCard(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Icon(PhosphorIcons.flaskFill, color: _paperMode ? Colors.amber : Colors.greenAccent),
-                      const SizedBox(width: 8),
-                      Text(_paperMode ? 'Paper Simulation' : 'LIVE Mode', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  Switch(
-                    value: _paperMode,
-                    activeColor: Colors.amber,
-                    onChanged: (v) => setState(() => _paperMode = v),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Icon(PhosphorIcons.telegramLogoFill, color: theme.primaryColor),
-                      const SizedBox(width: 8),
-                      const Text('Telegram Alerts', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  Switch(
-                    value: _telegramAlerts,
-                    activeColor: theme.primaryColor,
-                    onChanged: (v) => setState(() => _telegramAlerts = v),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }
