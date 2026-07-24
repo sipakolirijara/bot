@@ -31,6 +31,7 @@ class _BotEngineTabState extends State<BotEngineTab> {
   final _realMaxTradeCtrl = TextEditingController();
   final _realDailyCapCtrl = TextEditingController();
   final _stablecoinsCtrl = TextEditingController();
+  final _botUsernameCtrl = TextEditingController(); // NEW
 
   @override
   void initState() {
@@ -62,6 +63,7 @@ class _BotEngineTabState extends State<BotEngineTab> {
         _realMaxTradeCtrl.text = data['max_real_trade_usd'] ?? '25';
         _realDailyCapCtrl.text = data['max_daily_real_spend_usd'] ?? '100';
         _stablecoinsCtrl.text = data['stablecoin_mints'] ?? '';
+        _botUsernameCtrl.text = data['telegram_bot_username'] ?? ''; // NEW
         
         _isLoading = false;
       });
@@ -88,6 +90,7 @@ class _BotEngineTabState extends State<BotEngineTab> {
       'max_real_trade_usd': _realMaxTradeCtrl.text,
       'max_daily_real_spend_usd': _realDailyCapCtrl.text,
       'stablecoin_mints': _stablecoinsCtrl.text,
+      'telegram_bot_username': _botUsernameCtrl.text, // NEW
       'telegram_enabled': _telegramAlerts ? '1' : '0',
       'paper_trading_enabled': _paperMode ? '1' : '0',
       'live_trading_enabled': _liveMode ? '1' : '0',
@@ -98,12 +101,7 @@ class _BotEngineTabState extends State<BotEngineTab> {
 
     if (mounted) {
       setState(() => _isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(res['message'] ?? 'Settings updated'),
-          backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Settings updated'), backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red));
     }
   }
 
@@ -116,19 +114,7 @@ class _BotEngineTabState extends State<BotEngineTab> {
         children: [
           Text(label, style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1)),
           const SizedBox(height: 8),
-          TextField(
-            controller: controller,
-            maxLines: isMultiLine ? 3 : 1,
-            keyboardType: isMultiLine ? TextInputType.text : const TextInputType.numberWithOptions(decimal: true),
-            style: const TextStyle(color: Colors.white, fontSize: 14),
-            decoration: InputDecoration(
-              prefixIcon: isMultiLine ? null : Icon(icon, color: theme.primaryColor, size: 18),
-              filled: true,
-              fillColor: Colors.black.withOpacity(0.2),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            ),
-          ),
+          TextField(controller: controller, maxLines: isMultiLine ? 3 : 1, keyboardType: isMultiLine ? TextInputType.text : const TextInputType.numberWithOptions(decimal: true), style: const TextStyle(color: Colors.white, fontSize: 14), decoration: InputDecoration(prefixIcon: isMultiLine ? null : Icon(icon, color: theme.primaryColor, size: 18), filled: true, fillColor: Colors.black.withOpacity(0.2), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none), contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14))),
         ],
       ),
     );
@@ -137,10 +123,7 @@ class _BotEngineTabState extends State<BotEngineTab> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    if (_isLoading) return const Center(child: CircularProgressIndicator());
 
     return ListView(
       padding: const EdgeInsets.all(24.0),
@@ -152,37 +135,17 @@ class _BotEngineTabState extends State<BotEngineTab> {
             children: [
               Row(children: [Icon(PhosphorIcons.toggleLeftFill, color: theme.primaryColor), const SizedBox(width: 8), const Text('Master Engine Controls', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16))]),
               const SizedBox(height: 16),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                activeColor: Colors.amber,
-                title: const Text('Paper Trading (Simulated)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-                subtitle: Text('Open virtual positions automatically', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12)),
-                value: _paperMode,
-                onChanged: (val) => setState(() => _paperMode = val),
-              ),
+              SwitchListTile(contentPadding: EdgeInsets.zero, activeColor: Colors.amber, title: const Text('Paper Trading (Simulated)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)), subtitle: Text('Open virtual positions automatically', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12)), value: _paperMode, onChanged: (val) => setState(() => _paperMode = val)),
               Container(height: 1, color: Colors.white.withOpacity(0.05)),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                activeColor: Colors.redAccent,
-                title: Row(children: const [Icon(PhosphorIcons.warningCircleFill, color: Colors.redAccent, size: 16), SizedBox(width: 6), Text('Live REAL Trading', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 14))]),
-                subtitle: Text('Use real master wallet funds on Jupiter', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12)),
-                value: _liveMode,
-                onChanged: (val) => setState(() => _liveMode = val),
-              ),
+              SwitchListTile(contentPadding: EdgeInsets.zero, activeColor: Colors.redAccent, title: Row(children: const [Icon(PhosphorIcons.warningCircleFill, color: Colors.redAccent, size: 16), SizedBox(width: 6), Text('Live REAL Trading', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 14))]), subtitle: Text('Use real master wallet funds on Jupiter', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12)), value: _liveMode, onChanged: (val) => setState(() => _liveMode = val)),
               Container(height: 1, color: Colors.white.withOpacity(0.05)),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                activeColor: Colors.blueAccent,
-                title: const Text('Telegram Alerts', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-                subtitle: Text('Broadcast updates to designated channel', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12)),
-                value: _telegramAlerts,
-                onChanged: (val) => setState(() => _telegramAlerts = val),
-              ),
+              SwitchListTile(contentPadding: EdgeInsets.zero, activeColor: Colors.blueAccent, title: const Text('Telegram Alerts', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)), subtitle: Text('Broadcast updates to designated channel', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12)), value: _telegramAlerts, onChanged: (val) => setState(() => _telegramAlerts = val)),
+              const SizedBox(height: 16),
+              _buildTextField('OFFICIAL BOT USERNAME (@)', _botUsernameCtrl, PhosphorIcons.robot, isMultiLine: false),
             ],
           ),
         ),
         const SizedBox(height: 16),
-
         GlassCard(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -197,7 +160,6 @@ class _BotEngineTabState extends State<BotEngineTab> {
           ),
         ),
         const SizedBox(height: 16),
-
         GlassCard(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -212,18 +174,11 @@ class _BotEngineTabState extends State<BotEngineTab> {
               Container(height: 1, color: Colors.white.withOpacity(0.05)),
               const SizedBox(height: 16),
               _buildTextField('VIRTUAL PAPER SIZE (\$)', _paperSizeCtrl, PhosphorIcons.stack),
-              Row(
-                children: [
-                  Expanded(child: _buildTextField('DEFAULT TP (%)', _tpCtrl, PhosphorIcons.trendUp)),
-                  const SizedBox(width: 12),
-                  Expanded(child: _buildTextField('DEFAULT SL (%)', _slCtrl, PhosphorIcons.trendDown)),
-                ],
-              ),
+              Row(children: [Expanded(child: _buildTextField('DEFAULT TP (%)', _tpCtrl, PhosphorIcons.trendUp)), const SizedBox(width: 12), Expanded(child: _buildTextField('DEFAULT SL (%)', _slCtrl, PhosphorIcons.trendDown))]),
             ],
           ),
         ),
         const SizedBox(height: 16),
-
         GlassCard(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -238,24 +193,7 @@ class _BotEngineTabState extends State<BotEngineTab> {
           ),
         ),
         const SizedBox(height: 32),
-
-        SizedBox(
-          width: double.infinity,
-          height: 56,
-          child: ElevatedButton.icon(
-            onPressed: _isSaving ? null : _saveSettings,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: theme.primaryColor,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              elevation: 0,
-            ),
-            icon: _isSaving 
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : const Icon(PhosphorIcons.floppyDiskFill),
-            label: Text(_isSaving ? 'SAVING...' : 'SAVE CONFIGURATION', style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
-          ),
-        ),
+        SizedBox(width: double.infinity, height: 56, child: ElevatedButton.icon(onPressed: _isSaving ? null : _saveSettings, style: ElevatedButton.styleFrom(backgroundColor: theme.primaryColor, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0), icon: _isSaving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(PhosphorIcons.floppyDiskFill), label: Text(_isSaving ? 'SAVING...' : 'SAVE CONFIGURATION', style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)))),
         const SizedBox(height: 40),
       ],
     );
