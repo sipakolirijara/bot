@@ -40,15 +40,6 @@ class AdminScreen extends StatelessWidget {
   }
 }
 
-// ... Keep existing TrackedWalletsTab ...
-class TrackedWalletsTab extends StatefulWidget {
-  const TrackedWalletsTab({super.key});
-  @override State<TrackedWalletsTab> createState() => _TrackedWalletsTabState();
-}
-class _TrackedWalletsTabState extends State<TrackedWalletsTab> {
-  @override Widget build(BuildContext context) => const Center(child: Text('Wallet tracking here', style: TextStyle(color: Colors.white)));
-}
-
 // ==================== TAB 1: TEAM QUOTAS ====================
 class TeamQuotasTab extends StatefulWidget {
   const TeamQuotasTab({super.key});
@@ -68,13 +59,17 @@ class _TeamQuotasTabState extends State<TeamQuotasTab> {
   }
 
   Future<void> _toggleFlag(String action, int userId, bool allow) async {
-    final res = await context.read<ApiService>().postEndpoint('admin_users.php?action=$action', {'user_id': userId, action == 'toggle_manual' ? 'allow_manual_trade' : 'allow_telegram_alerts': allow ? 1 : 0});
+    final res = await context.read<ApiService>().postEndpoint('admin_users.php?action=$action', {
+      'user_id': userId, 
+      action == 'toggle_manual' ? 'allow_manual_trade' : 'allow_telegram_alerts': allow ? 1 : 0
+    });
     if (mounted) _fetchUsers();
   }
 
-  Future<void> _showEditLimitsModal(dynamic u) async {
-    final maxTrCtrl = TextEditingController(text: u['quotas']['max_per_trade_usd']?.toString() ?? '');
-    final dCapCtrl = TextEditingController(text: u['quotas']['daily_spend_cap']?.toString() ?? '');
+  Future<void> _showEditQuotasModal(dynamic u) async {
+    final dailyCtrl = TextEditingController(text: u['quotas']?['daily']?.toString() ?? '');
+    final monthlyCtrl = TextEditingController(text: u['quotas']?['monthly']?.toString() ?? '');
+    final yearlyCtrl = TextEditingController(text: u['quotas']?['yearly']?.toString() ?? '');
     bool isSaving = false;
 
     await showDialog(
@@ -82,13 +77,17 @@ class _TeamQuotasTabState extends State<TeamQuotasTab> {
       builder: (ctx) => StatefulBuilder(
         builder: (context, setStateDialog) => AlertDialog(
           backgroundColor: const Color(0xFF13131A),
-          title: Row(children: [Icon(PhosphorIcons.ticketFill, color: Theme.of(context).primaryColor), const SizedBox(width: 8), const Text('Trade Limits', style: TextStyle(color: Colors.white, fontSize: 16))]),
+          title: Row(children: [Icon(PhosphorIcons.ticketFill, color: Theme.of(context).primaryColor), const SizedBox(width: 8), const Text('Copy Trade Quotas', style: TextStyle(color: Colors.white, fontSize: 16))]),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: maxTrCtrl, style: const TextStyle(color: Colors.white), decoration: InputDecoration(labelText: 'Max Per Trade (\$)', filled: true, fillColor: Colors.black26, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
+              const Text('Set maximum trade count limits (leave empty for unlimited):', style: TextStyle(color: Colors.white54, fontSize: 12)),
+              const SizedBox(height: 16),
+              TextField(controller: dailyCtrl, keyboardType: TextInputType.number, style: const TextStyle(color: Colors.white), decoration: InputDecoration(labelText: 'Daily Max Trades', labelStyle: const TextStyle(color: Colors.white54), filled: true, fillColor: Colors.black26, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
               const SizedBox(height: 12),
-              TextField(controller: dCapCtrl, style: const TextStyle(color: Colors.white), decoration: InputDecoration(labelText: 'Daily Spend Cap (\$)', filled: true, fillColor: Colors.black26, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
+              TextField(controller: monthlyCtrl, keyboardType: TextInputType.number, style: const TextStyle(color: Colors.white), decoration: InputDecoration(labelText: 'Monthly Max Trades', labelStyle: const TextStyle(color: Colors.white54), filled: true, fillColor: Colors.black26, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
+              const SizedBox(height: 12),
+              TextField(controller: yearlyCtrl, keyboardType: TextInputType.number, style: const TextStyle(color: Colors.white), decoration: InputDecoration(labelText: 'Yearly Max Trades', labelStyle: const TextStyle(color: Colors.white54), filled: true, fillColor: Colors.black26, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
             ],
           ),
           actions: [
@@ -97,13 +96,19 @@ class _TeamQuotasTabState extends State<TeamQuotasTab> {
               style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor),
               onPressed: isSaving ? null : () async {
                 setStateDialog(() => isSaving = true);
-                final res = await this.context.read<ApiService>().postEndpoint('admin_users.php?action=set_quota', {'user_id': u['id'], 'user_max_per_trade_usd': maxTrCtrl.text, 'user_daily_spend_cap': dCapCtrl.text});
+                final res = await this.context.read<ApiService>().postEndpoint('admin_users.php?action=set_quota', {
+                  'user_id': u['id'], 
+                  'max_trades_daily': dailyCtrl.text.trim(), 
+                  'max_trades_monthly': monthlyCtrl.text.trim(),
+                  'max_trades_yearly': yearlyCtrl.text.trim()
+                });
                 if (mounted) {
                   Navigator.pop(ctx);
+                  ScaffoldMessenger.of(this.context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Quotas saved'), backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red));
                   _fetchUsers();
                 }
               },
-              child: isSaving ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white)) : const Text('Save', style: TextStyle(color: Colors.white)),
+              child: isSaving ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white)) : const Text('Save Quotas', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -123,6 +128,10 @@ class _TeamQuotasTabState extends State<TeamQuotasTab> {
             const Center(child: CircularProgressIndicator())
           else 
             ..._users.map((u) {
+              final dailyQuota = u['quotas']?['daily'] != null ? '${u['quotas']['daily']}/day' : '∞/day';
+              final monthlyQuota = u['quotas']?['monthly'] != null ? '${u['quotas']['monthly']}/mo' : '∞/mo';
+              final yearlyQuota = u['quotas']?['yearly'] != null ? '${u['quotas']['yearly']}/yr' : '∞/yr';
+
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12.0),
                 child: GlassCard(
@@ -132,13 +141,22 @@ class _TeamQuotasTabState extends State<TeamQuotasTab> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(u['username'] ?? 'User', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)), Text('Role: ${u['role']}', style: TextStyle(color: theme.primaryColor, fontSize: 12))]),
+                          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(u['username'] ?? 'User', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)), 
+                            Text('Role: ${u['role']}', style: TextStyle(color: theme.primaryColor, fontSize: 12))
+                          ]),
                           ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(backgroundColor: Colors.white10, foregroundColor: Colors.white),
-                            onPressed: () => _showEditLimitsModal(u),
+                            onPressed: () => _showEditQuotasModal(u),
                             icon: const Icon(PhosphorIcons.ticket, size: 14),
-                            label: const Text('Limits', style: TextStyle(fontSize: 11)),
+                            label: const Text('Quotas', style: TextStyle(fontSize: 11)),
                           )
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Text('Limits: $dailyQuota | $monthlyQuota | $yearlyQuota', style: const TextStyle(color: Colors.white54, fontSize: 11, fontFamily: 'monospace')),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -151,6 +169,137 @@ class _TeamQuotasTabState extends State<TeamQuotasTab> {
                 ),
               );
             }).toList()
+        ],
+      ),
+    );
+  }
+}
+
+// ==================== TAB 3: TRACKED WALLETS ====================
+class TrackedWalletsTab extends StatefulWidget {
+  const TrackedWalletsTab({super.key});
+  @override State<TrackedWalletsTab> createState() => _TrackedWalletsTabState();
+}
+
+class _TrackedWalletsTabState extends State<TrackedWalletsTab> {
+  final _walletController = TextEditingController();
+  List<dynamic> _wallets = [];
+  bool _isLoading = false;
+
+  @override void initState() { super.initState(); _fetchWallets(); }
+
+  Future<void> _fetchWallets() async {
+    setState(() => _isLoading = true);
+    final res = await context.read<ApiService>().getEndpoint('admin_wallets.php?action=fetch');
+    if (mounted) setState(() { _wallets = res['data']?['wallets'] ?? []; _isLoading = false; });
+  }
+
+  Future<void> _addWallet() async {
+    if (_walletController.text.trim().isEmpty) return;
+    setState(() => _isLoading = true);
+    final res = await context.read<ApiService>().postEndpoint('admin_wallets.php?action=add', {
+      'address': _walletController.text.trim(),
+      'label': 'Whale Tracker'
+    });
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? ''), backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red));
+      _walletController.clear();
+      _fetchWallets();
+    }
+  }
+
+  Future<void> _syncWebhook() async {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Syncing Helius Webhook...'), backgroundColor: Colors.amber));
+    final res = await context.read<ApiService>().getEndpoint('admin_wallets.php?action=sync_webhook');
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? ''), backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red));
+  }
+
+  Future<void> _toggleCopy(int id, bool currentEnabled) async {
+    final res = await context.read<ApiService>().postEndpoint('admin_wallets.php?action=toggle_copy', {'id': id, 'enabled': currentEnabled ? 0 : 1});
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? ''), backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red));
+      _fetchWallets();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return RefreshIndicator(
+      onRefresh: _fetchWallets,
+      child: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          GlassCard(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Track Target Address', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                    Icon(PhosphorIcons.userPlusFill, color: theme.primaryColor),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _walletController,
+                  style: const TextStyle(color: Colors.white, fontFamily: 'monospace', fontSize: 12),
+                  decoration: InputDecoration(labelText: 'Whale / Shark Wallet Address', labelStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant), filled: true, fillColor: Colors.black.withOpacity(0.2), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(width: double.infinity, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: theme.primaryColor, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14)), onPressed: _isLoading ? null : _addWallet, child: const Text('Deploy Tracker', style: TextStyle(fontWeight: FontWeight.bold)))),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('ACTIVE TRACKERS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1)),
+              OutlinedButton.icon(
+                onPressed: _syncWebhook,
+                style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.amber), foregroundColor: Colors.amber, padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+                icon: const Icon(PhosphorIcons.arrowsClockwiseBold, size: 16),
+                label: const Text('Sync Webhook', style: TextStyle(fontSize: 11)),
+              )
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_isLoading && _wallets.isEmpty) 
+            const Center(child: CircularProgressIndicator())
+          else if (_wallets.isEmpty) 
+            Text('No wallets tracked yet.', style: TextStyle(color: theme.colorScheme.onSurfaceVariant))
+          else 
+            ..._wallets.map((w) => Padding(
+              padding: const EdgeInsets.only(bottom: 12.0),
+              child: GlassCard(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(w['label'] ?? 'Unknown', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                    const SizedBox(height: 6),
+                    Text(w['address'] ?? '', style: const TextStyle(color: Colors.white70, fontFamily: 'monospace', fontSize: 11)),
+                    const SizedBox(height: 12),
+                    Container(height: 1, color: Colors.white10),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Copy Trading', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12)),
+                        Switch(
+                          value: w['copy_enabled'] == true,
+                          activeColor: Colors.greenAccent,
+                          onChanged: (_) => _toggleCopy(w['id'], w['copy_enabled']),
+                        )
+                      ],
+                    )
+                  ],
+                ),
+              ),
+            )).toList()
         ],
       ),
     );
