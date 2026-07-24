@@ -39,8 +39,13 @@ class _PositionsScreenState extends State<PositionsScreen> {
 
   Future<void> _launchDexScreener(String address) async {
     final url = Uri.parse('https://dexscreener.com/solana/$address');
-    if (await canLaunchUrl(url)) {
+    try {
+      // Bypasses the canLaunchUrl block on Android 11+
       await launchUrl(url, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open browser')));
+      }
     }
   }
 
@@ -238,29 +243,51 @@ class _PositionsScreenState extends State<PositionsScreen> {
       child: Column(
         children: [
           const SizedBox(height: 12),
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            height: 48,
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withOpacity(0.05)),
-            ),
-            child: TabBar(
-              indicatorSize: TabBarIndicatorSize.tab,
-              dividerColor: Colors.transparent,
-              indicator: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                gradient: LinearGradient(colors: [theme.primaryColor, const Color(0xFFE024CE)]),
+          // Tab Bar Row with Manual Refresh Button
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  margin: const EdgeInsets.only(left: 16, right: 8),
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.white.withOpacity(0.05)),
+                  ),
+                  child: TabBar(
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    dividerColor: Colors.transparent,
+                    indicator: BoxDecoration(
+                      borderRadius: BorderRadius.circular(24),
+                      gradient: LinearGradient(colors: [theme.primaryColor, const Color(0xFFE024CE)]),
+                    ),
+                    labelColor: Colors.white,
+                    unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
+                    labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    tabs: [
+                      Tab(text: 'Open (${_openPositions.length})'),
+                      Tab(text: 'Closed (${_closedPositions.length})'),
+                    ],
+                  ),
+                ),
               ),
-              labelColor: Colors.white,
-              unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
-              labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              tabs: [
-                Tab(text: 'Open Trades (${_openPositions.length})'),
-                Tab(text: 'Closed (${_closedPositions.length})'),
-              ],
-            ),
+              Container(
+                margin: const EdgeInsets.only(right: 16),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.3),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white.withOpacity(0.05)),
+                ),
+                child: IconButton(
+                  icon: const Icon(PhosphorIcons.arrowsClockwiseBold, color: Colors.white, size: 20),
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Refreshing live market data...'), duration: Duration(seconds: 1)));
+                    _fetchPositions();
+                  },
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           Expanded(
@@ -299,7 +326,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
                                               children: [
                                                 Text(
                                                   _formatAddress(p['token_address'] ?? ''),
-                                                  style: const TextStyle(color: Colors.blueAccent, fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 13), // Removed underline
+                                                  style: const TextStyle(color: Colors.blueAccent, fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 13), // No underline
                                                 ),
                                                 const SizedBox(width: 4),
                                                 const Icon(PhosphorIcons.arrowUpRight, color: Colors.blueAccent, size: 14),
@@ -479,7 +506,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
                                               children: [
                                                 Text(
                                                   _formatAddress(p['token_address'] ?? ''),
-                                                  style: const TextStyle(color: Colors.blueAccent, fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 13), // Removed underline
+                                                  style: const TextStyle(color: Colors.blueAccent, fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 13), // No underline
                                                 ),
                                                 const SizedBox(width: 4),
                                                 const Icon(PhosphorIcons.arrowUpRight, color: Colors.blueAccent, size: 14),
