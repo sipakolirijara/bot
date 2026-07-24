@@ -62,6 +62,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? ''), backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red));
   }
 
+  Future<void> _showChangePasswordModal() async {
+    final oldCtrl = TextEditingController();
+    final newCtrl = TextEditingController();
+    bool isSubmitting = false;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          backgroundColor: const Color(0xFF13131A),
+          title: Row(children: [Icon(PhosphorIcons.lockKeyFill, color: Theme.of(context).primaryColor), const SizedBox(width: 8), const Text('Change Password', style: TextStyle(color: Colors.white, fontSize: 16))]),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: oldCtrl, obscureText: true, style: const TextStyle(color: Colors.white, fontSize: 13), decoration: InputDecoration(labelText: 'Current Password', filled: true, fillColor: Colors.black26, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
+              const SizedBox(height: 12),
+              TextField(controller: newCtrl, obscureText: true, style: const TextStyle(color: Colors.white, fontSize: 13), decoration: InputDecoration(labelText: 'New Password', filled: true, fillColor: Colors.black26, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: Colors.white54))),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor),
+              onPressed: isSubmitting ? null : () async {
+                if (oldCtrl.text.isEmpty || newCtrl.text.isEmpty) return;
+                setStateDialog(() => isSubmitting = true);
+                final res = await this.context.read<ApiService>().postEndpoint('auth.php?action=change_password', {'old_password': oldCtrl.text, 'new_password': newCtrl.text});
+                if (mounted) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(this.context).showSnackBar(SnackBar(content: Text(res['message'] ?? ''), backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red));
+                }
+              },
+              child: isSubmitting ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('Save', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _showUpdateKeyModal() async {
     final ctrl = TextEditingController();
     bool isSubmitting = false;
@@ -112,11 +152,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
       : ListView(
           padding: const EdgeInsets.all(24),
           children: [
+            // 1. Account Credentials & Security
             GlassCard(
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  Row(children: [Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: theme.primaryColor.withOpacity(0.1), shape: BoxShape.circle), child: Icon(PhosphorIcons.shieldCheckFill, color: theme.primaryColor)), const SizedBox(width: 16), const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Account Credentials', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)), Text('Manage security & password', style: TextStyle(color: Colors.white54, fontSize: 12))]))]),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(children: [Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: theme.primaryColor.withOpacity(0.1), shape: BoxShape.circle), child: Icon(PhosphorIcons.shieldCheckFill, color: theme.primaryColor)), const SizedBox(width: 16), const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Account Security', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)), Text('Manage app access', style: TextStyle(color: Colors.white54, fontSize: 12))])]),
+                      IconButton(icon: const Icon(PhosphorIcons.pencilSimple, color: Colors.white54), onPressed: _showChangePasswordModal),
+                    ],
+                  ),
                   const SizedBox(height: 24),
                   Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Row(children: [Icon(PhosphorIcons.fingerprint, color: Colors.white54, size: 20), SizedBox(width: 8), Text('Biometric Quick-Lock', style: TextStyle(color: Colors.white))]), Switch(value: _biometricEnabled, activeColor: theme.primaryColor, onChanged: (v) => setState(() => _biometricEnabled = v))]),
                 ],
@@ -124,6 +171,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 24),
 
+            // 2. Execution Wallet
             GlassCard(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -141,6 +189,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 24),
 
+            // 3. Personal Trade Limits
             GlassCard(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -158,6 +207,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 24),
 
+            // 4. Telegram Alerts
             GlassCard(
               padding: const EdgeInsets.all(20),
               child: Column(

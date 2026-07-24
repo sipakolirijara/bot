@@ -44,14 +44,13 @@ class _PositionsScreenState extends State<PositionsScreen> {
     }
   }
 
-  // Format UTC MySQL string into Lagos Time (West Africa Time UTC+1) in 12-Hour AM/PM format
   String formatLagosTime(String? utcString) {
     if (utcString == null || utcString.isEmpty) return '-';
     try {
       String formattedStr = utcString.replaceAll(' ', 'T');
       if (!formattedStr.endsWith('Z')) formattedStr += 'Z';
       final utcDateTime = DateTime.parse(formattedStr);
-      final lagosDateTime = utcDateTime.add(const Duration(hours: 1)); // WAT = UTC+1
+      final lagosDateTime = utcDateTime.add(const Duration(hours: 1)); 
       
       final hour24 = lagosDateTime.hour;
       final hour12 = (hour24 % 12 == 0) ? 12 : hour24 % 12;
@@ -68,7 +67,6 @@ class _PositionsScreenState extends State<PositionsScreen> {
     }
   }
 
-  // Calculates exact duration spent inside trade
   String calculateTimeInTrade(String? openedAtStr, [String? closedAtStr]) {
     if (openedAtStr == null || openedAtStr.isEmpty) return '-';
     try {
@@ -103,20 +101,65 @@ class _PositionsScreenState extends State<PositionsScreen> {
     }
   }
 
-  Future<void> _closePosition(int id) async {
-    final res = await context.read<ApiService>().postEndpoint('trade.php?action=close_position', {'id': id});
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(res['message'] ?? 'Action complete'),
-        backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red,
-      ));
-      _fetchPositions();
-    }
+  String _formatMcap(dynamic v) {
+    if (v == null) return '-';
+    double val = double.tryParse(v.toString()) ?? 0.0;
+    if (val >= 1000000) return '\$${(val / 1000000).toStringAsFixed(2)}M';
+    if (val >= 1000) return '\$${(val / 1000).toStringAsFixed(1)}K';
+    return '\$${val.round()}';
   }
 
   String _formatAddress(String addr) {
     if (addr.length <= 12) return addr;
     return '${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}';
+  }
+
+  Future<void> _closePosition(int id) async {
+    final res = await context.read<ApiService>().postEndpoint('trade.php?action=close_position', {'id': id});
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Action complete'), backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red));
+      _fetchPositions();
+    }
+  }
+
+  Future<void> _openEditModal(int id, String currentTp, String currentSl) async {
+    final tpCtrl = TextEditingController(text: currentTp);
+    final slCtrl = TextEditingController(text: currentSl);
+    bool isSaving = false;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          backgroundColor: const Color(0xFF13131A),
+          title: Row(children: [Icon(PhosphorIcons.slidersFill, color: Theme.of(context).primaryColor), const SizedBox(width: 8), const Text('Edit Targets', style: TextStyle(color: Colors.white, fontSize: 16))]),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: tpCtrl, keyboardType: TextInputType.number, style: const TextStyle(color: Colors.white), decoration: InputDecoration(labelText: 'Take Profit (%)', filled: true, fillColor: Colors.black26, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
+              const SizedBox(height: 12),
+              TextField(controller: slCtrl, keyboardType: TextInputType.number, style: const TextStyle(color: Colors.white), decoration: InputDecoration(labelText: 'Stop Loss (%)', filled: true, fillColor: Colors.black26, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: Colors.white54))),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor),
+              onPressed: isSaving ? null : () async {
+                setStateDialog(() => isSaving = true);
+                final res = await this.context.read<ApiService>().postEndpoint('trade.php?action=update_tpsl', {'id': id, 'tp_percent': tpCtrl.text, 'sl_percent': slCtrl.text});
+                if (mounted) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(this.context).showSnackBar(SnackBar(content: Text(res['message'] ?? ''), backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red));
+                  _fetchPositions();
+                }
+              },
+              child: isSaving ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white)) : const Text('Save', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -139,10 +182,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
               labelColor: Colors.white,
               unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
               labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              tabs: [
-                Tab(text: 'Open Trades (${_openPositions.length})'),
-                Tab(text: 'Closed History (${_closedPositions.length})'),
-              ],
+              tabs: [Tab(text: 'Open Trades (${_openPositions.length})'), Tab(text: 'Closed (${_closedPositions.length})')],
             ),
           ),
           const SizedBox(height: 12),
@@ -151,7 +191,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
               ? const Center(child: CircularProgressIndicator()) 
               : TabBarView(
                   children: [
-                    // OPEN POSITIONS TAB
+                    // OPEN POSITIONS
                     RefreshIndicator(
                       onRefresh: _fetchPositions,
                       child: _openPositions.isEmpty 
@@ -162,6 +202,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
                             itemBuilder: (context, index) {
                               final p = _openPositions[index];
                               final pnl = double.tryParse(p['unrealized_pnl']?.toString() ?? '0') ?? 0.0;
+                              final pct = double.tryParse(p['change_percent']?.toString() ?? '0') ?? 0.0;
                               final isProfit = pnl >= 0;
 
                               return Padding(
@@ -184,24 +225,55 @@ class _PositionsScreenState extends State<PositionsScreen> {
                                               ],
                                             ),
                                           ),
-                                          Text(
-                                            '${isProfit ? '+' : ''}\$${pnl.toStringAsFixed(2)}',
-                                            style: TextStyle(color: isProfit ? Colors.greenAccent : Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 15),
-                                          ),
+                                          Text(p['wallet_label'] ?? 'Manual', style: const TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold)),
                                         ],
                                       ),
-                                      const SizedBox(height: 8),
+                                      const SizedBox(height: 16),
+                                      Row(
+                                        children: [
+                                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('ENTRY MCAP', style: TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 1)), const SizedBox(height: 4), Text(_formatMcap(p['entry_mcap']), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))])),
+                                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('LIVE MCAP', style: TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 1)), const SizedBox(height: 4), Text(_formatMcap(p['current_mcap']), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))])),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Row(
+                                        children: [
+                                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                            const Text('UNREALIZED P&L', style: TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 1)), 
+                                            const SizedBox(height: 4), 
+                                            Text('${isProfit ? '+' : ''}\$${pnl.toStringAsFixed(2)} (${isProfit ? '+' : ''}${pct.toStringAsFixed(1)}%)', style: TextStyle(color: isProfit ? Colors.greenAccent : Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 13))
+                                          ])),
+                                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                            const Text('TRADE SIZE', style: TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 1)), 
+                                            const SizedBox(height: 4), 
+                                            Text('\$${double.tryParse(p['virtual_usd_amount']?.toString() ?? '0')?.toStringAsFixed(2) ?? '0.00'}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))
+                                          ])),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 16),
                                       Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Text('Opened: ${formatLagosTime(p['opened_at'])}', style: const TextStyle(color: Colors.white54, fontSize: 11)),
                                           Row(
                                             children: [
                                               const Icon(PhosphorIcons.clock, color: Colors.purpleAccent, size: 12),
                                               const SizedBox(width: 4),
-                                              Text(calculateTimeInTrade(p['opened_at']), style: const TextStyle(color: Colors.purpleAccent, fontWeight: FontWeight.bold, fontSize: 11)),
+                                              Text('${calculateTimeInTrade(p['opened_at'])} • ${formatLagosTime(p['opened_at'])}', style: const TextStyle(color: Colors.white54, fontSize: 11)),
                                             ],
                                           ),
+                                          InkWell(
+                                            onTap: () => _openEditModal(p['id'], p['tp_percent']?.toString() ?? '50', p['sl_percent']?.toString() ?? '20'),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(6), border: Border.all(color: Colors.white24)),
+                                              child: Row(
+                                                children: [
+                                                  const Icon(PhosphorIcons.pencilSimple, color: Colors.white54, size: 12),
+                                                  const SizedBox(width: 4),
+                                                  Text('+${p['tp_percent']}% / -${p['sl_percent']}%', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                                                ],
+                                            )),
+                                          )
                                         ],
                                       ),
                                       const SizedBox(height: 12),
@@ -222,7 +294,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
                           ),
                     ),
 
-                    // CLOSED POSITIONS TAB
+                    // CLOSED POSITIONS
                     RefreshIndicator(
                       onRefresh: _fetchPositions,
                       child: _closedPositions.isEmpty 
@@ -234,6 +306,9 @@ class _PositionsScreenState extends State<PositionsScreen> {
                               final p = _closedPositions[index];
                               final pnl = double.tryParse(p['pnl_usd']?.toString() ?? '0') ?? 0.0;
                               final isProfit = pnl >= 0;
+                              
+                              String badgeText = p['close_reason'] == 'TP_HIT' ? 'TP Hit' : (p['close_reason'] == 'SL_HIT' ? 'SL Hit' : 'Manual');
+                              Color badgeColor = p['close_reason'] == 'TP_HIT' ? Colors.greenAccent : (p['close_reason'] == 'SL_HIT' ? Colors.redAccent : Colors.blueAccent);
 
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 12.0),
@@ -255,24 +330,39 @@ class _PositionsScreenState extends State<PositionsScreen> {
                                               ],
                                             ),
                                           ),
-                                          Text(
-                                            '${isProfit ? '+' : ''}\$${pnl.toStringAsFixed(2)}',
-                                            style: TextStyle(color: isProfit ? Colors.greenAccent : Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 15),
-                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(color: badgeColor.withOpacity(0.1), border: Border.all(color: badgeColor.withOpacity(0.3)), borderRadius: BorderRadius.circular(4)),
+                                            child: Text(badgeText, style: TextStyle(color: badgeColor, fontSize: 10, fontWeight: FontWeight.bold)),
+                                          )
                                         ],
                                       ),
-                                      const SizedBox(height: 8),
+                                      const SizedBox(height: 12),
                                       Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Text('Closed: ${formatLagosTime(p['closed_at'])}', style: const TextStyle(color: Colors.white54, fontSize: 11)),
-                                          Row(
+                                          Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              const Icon(PhosphorIcons.hourglassHigh, color: Colors.amberAccent, size: 12),
-                                              const SizedBox(width: 4),
-                                              Text('In trade: ${calculateTimeInTrade(p['opened_at'], p['closed_at'])}', style: const TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold, fontSize: 11)),
+                                              const Text('REALIZED P&L', style: TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 1)),
+                                              const SizedBox(height: 2),
+                                              Text('${isProfit ? '+' : ''}\$${pnl.toStringAsFixed(2)}', style: TextStyle(color: isProfit ? Colors.greenAccent : Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 16)),
                                             ],
                                           ),
+                                          Column(
+                                            crossAxisAlignment: CrossAxisAlignment.end,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  const Icon(PhosphorIcons.hourglassHigh, color: Colors.amberAccent, size: 12),
+                                                  const SizedBox(width: 4),
+                                                  Text(calculateTimeInTrade(p['opened_at'], p['closed_at']), style: const TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold, fontSize: 11)),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(formatLagosTime(p['closed_at']), style: const TextStyle(color: Colors.white54, fontSize: 10)),
+                                            ],
+                                          )
                                         ],
                                       ),
                                     ],
