@@ -193,9 +193,9 @@ class _BotEngineTabState extends State<BotEngineTab> {
             children: [
               Row(children: [Icon(PhosphorIcons.shieldWarningFill, color: Colors.redAccent), const SizedBox(width: 8), const Text('Real Trading Risk Limits', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 16))]),
               const SizedBox(height: 20),
-              _buildTextField('REAL BASE SIZE ($)', _realBaseSizeCtrl, PhosphorIcons.currencyDollar),
-              _buildTextField('MAX PER TRADE ($)', _realMaxTradeCtrl, PhosphorIcons.prohibit),
-              _buildTextField('DAILY SPEND CAP ($)', _realDailyCapCtrl, PhosphorIcons.calendarX),
+              _buildTextField('REAL BASE SIZE (\$)', _realBaseSizeCtrl, PhosphorIcons.currencyDollar),
+              _buildTextField('MAX PER TRADE (\$)', _realMaxTradeCtrl, PhosphorIcons.prohibit),
+              _buildTextField('DAILY SPEND CAP (\$)', _realDailyCapCtrl, PhosphorIcons.calendarX),
             ],
           ),
         ),
@@ -215,7 +215,7 @@ class _BotEngineTabState extends State<BotEngineTab> {
               const SizedBox(height: 16),
               Container(height: 1, color: Colors.white.withOpacity(0.05)),
               const SizedBox(height: 16),
-              _buildTextField('VIRTUAL PAPER SIZE ($)', _paperSizeCtrl, PhosphorIcons.stack),
+              _buildTextField('VIRTUAL PAPER SIZE (\$)', _paperSizeCtrl, PhosphorIcons.stack),
               Row(
                 children: [
                   Expanded(child: _buildTextField('DEFAULT TP (%)', _tpCtrl, PhosphorIcons.trendUp)),
