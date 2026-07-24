@@ -126,8 +126,8 @@ class _PositionsScreenState extends State<PositionsScreen> {
   }
 
   Future<void> _openEditModal(int id, String currentTp, String currentSl) async {
-    final tpCtrl = TextEditingController(text: currentTp);
-    final slCtrl = TextEditingController(text: currentSl);
+    final tpCtrl = TextEditingController(text: currentTp == '0' ? '' : currentTp);
+    final slCtrl = TextEditingController(text: currentSl == '0' ? '' : currentSl);
     bool isSaving = false;
 
     await showDialog(
@@ -148,9 +148,12 @@ class _PositionsScreenState extends State<PositionsScreen> {
               TextField(
                 controller: tpCtrl,
                 keyboardType: TextInputType.number,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold),
                 decoration: InputDecoration(
                   labelText: 'Take Profit (%)',
+                  hintText: 'Enter 0 for No Limit',
+                  hintStyle: const TextStyle(color: Colors.white38),
+                  labelStyle: const TextStyle(color: Colors.greenAccent),
                   filled: true,
                   fillColor: Colors.black26,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -160,9 +163,12 @@ class _PositionsScreenState extends State<PositionsScreen> {
               TextField(
                 controller: slCtrl,
                 keyboardType: TextInputType.number,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
                 decoration: InputDecoration(
                   labelText: 'Stop Loss (%)',
+                  hintText: 'Enter 0 for No Limit',
+                  hintStyle: const TextStyle(color: Colors.white38),
+                  labelStyle: const TextStyle(color: Colors.redAccent),
                   filled: true,
                   fillColor: Colors.black26,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -172,6 +178,24 @@ class _PositionsScreenState extends State<PositionsScreen> {
           ),
           actions: [
             TextButton(
+              onPressed: isSaving ? null : () async {
+                setStateDialog(() => isSaving = true);
+                final res = await this.context.read<ApiService>().postEndpoint(
+                  'trade.php?action=update_tpsl',
+                  {'id': id, 'tp_percent': '0', 'sl_percent': '0'},
+                );
+                if (mounted) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(this.context).showSnackBar(SnackBar(
+                    content: const Text('Limits removed successfully'),
+                    backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red,
+                  ));
+                  _fetchPositions();
+                }
+              },
+              child: const Text('Remove Limits', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+            ),
+            TextButton(
               onPressed: () => Navigator.pop(ctx),
               child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
             ),
@@ -179,9 +203,12 @@ class _PositionsScreenState extends State<PositionsScreen> {
               style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor),
               onPressed: isSaving ? null : () async {
                 setStateDialog(() => isSaving = true);
+                final saveTp = tpCtrl.text.trim().isEmpty ? '0' : tpCtrl.text.trim();
+                final saveSl = slCtrl.text.trim().isEmpty ? '0' : slCtrl.text.trim();
+                
                 final res = await this.context.read<ApiService>().postEndpoint(
                   'trade.php?action=update_tpsl',
-                  {'id': id, 'tp_percent': tpCtrl.text, 'sl_percent': slCtrl.text},
+                  {'id': id, 'tp_percent': saveTp, 'sl_percent': saveSl},
                 );
                 if (mounted) {
                   Navigator.pop(ctx);
@@ -272,7 +299,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
                                               children: [
                                                 Text(
                                                   _formatAddress(p['token_address'] ?? ''),
-                                                  style: const TextStyle(color: Colors.blueAccent, fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 13, decoration: TextDecoration.underline),
+                                                  style: const TextStyle(color: Colors.blueAccent, fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 13), // Removed underline
                                                 ),
                                                 const SizedBox(width: 4),
                                                 const Icon(PhosphorIcons.arrowUpRight, color: Colors.blueAccent, size: 14),
@@ -373,10 +400,22 @@ class _PositionsScreenState extends State<PositionsScreen> {
                                               child: Row(
                                                 children: [
                                                   const Icon(PhosphorIcons.pencilSimple, color: Colors.white54, size: 12),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    '+${p['tp_percent']}% / -${p['sl_percent']}%',
-                                                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                                  const SizedBox(width: 6),
+                                                  RichText(
+                                                    text: TextSpan(
+                                                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                                      children: [
+                                                        TextSpan(
+                                                          text: (p['tp_percent'] == null || p['tp_percent'].toString() == '0' || p['tp_percent'].toString() == '0.00') ? 'No TP' : '+${p['tp_percent']}%',
+                                                          style: const TextStyle(color: Colors.greenAccent),
+                                                        ),
+                                                        const TextSpan(text: ' / ', style: TextStyle(color: Colors.white54)),
+                                                        TextSpan(
+                                                          text: (p['sl_percent'] == null || p['sl_percent'].toString() == '0' || p['sl_percent'].toString() == '0.00') ? 'No SL' : '-${p['sl_percent']}%',
+                                                          style: const TextStyle(color: Colors.redAccent),
+                                                        ),
+                                                      ],
+                                                    ),
                                                   ),
                                                 ],
                                               ),
@@ -440,7 +479,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
                                               children: [
                                                 Text(
                                                   _formatAddress(p['token_address'] ?? ''),
-                                                  style: const TextStyle(color: Colors.blueAccent, fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 13, decoration: TextDecoration.underline),
+                                                  style: const TextStyle(color: Colors.blueAccent, fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 13), // Removed underline
                                                 ),
                                                 const SizedBox(width: 4),
                                                 const Icon(PhosphorIcons.arrowUpRight, color: Colors.blueAccent, size: 14),
@@ -460,7 +499,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
                                       ),
                                       const SizedBox(height: 16),
 
-                                      // MCAP Row (RESTORED FOR HISTORY TAB)
+                                      // MCAP Row
                                       Row(
                                         children: [
                                           Expanded(
