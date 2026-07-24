@@ -50,7 +50,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
       String formattedStr = utcString.replaceAll(' ', 'T');
       if (!formattedStr.endsWith('Z')) formattedStr += 'Z';
       final utcDateTime = DateTime.parse(formattedStr);
-      final lagosDateTime = utcDateTime.add(const Duration(hours: 1)); 
+      final lagosDateTime = utcDateTime.add(const Duration(hours: 1)); // WAT = UTC+1
       
       final hour24 = lagosDateTime.hour;
       final hour12 = (hour24 % 12 == 0) ? 12 : hour24 % 12;
@@ -117,7 +117,10 @@ class _PositionsScreenState extends State<PositionsScreen> {
   Future<void> _closePosition(int id) async {
     final res = await context.read<ApiService>().postEndpoint('trade.php?action=close_position', {'id': id});
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Action complete'), backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(res['message'] ?? 'Action complete'),
+        backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red,
+      ));
       _fetchPositions();
     }
   }
@@ -132,29 +135,66 @@ class _PositionsScreenState extends State<PositionsScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (context, setStateDialog) => AlertDialog(
           backgroundColor: const Color(0xFF13131A),
-          title: Row(children: [Icon(PhosphorIcons.slidersFill, color: Theme.of(context).primaryColor), const SizedBox(width: 8), const Text('Edit Targets', style: TextStyle(color: Colors.white, fontSize: 16))]),
+          title: Row(
+            children: [
+              Icon(PhosphorIcons.slidersFill, color: Theme.of(context).primaryColor),
+              const SizedBox(width: 8),
+              const Text('Edit Targets', style: TextStyle(color: Colors.white, fontSize: 16)),
+            ],
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: tpCtrl, keyboardType: TextInputType.number, style: const TextStyle(color: Colors.white), decoration: InputDecoration(labelText: 'Take Profit (%)', filled: true, fillColor: Colors.black26, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
+              TextField(
+                controller: tpCtrl,
+                keyboardType: TextInputType.number,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Take Profit (%)',
+                  filled: true,
+                  fillColor: Colors.black26,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+              ),
               const SizedBox(height: 12),
-              TextField(controller: slCtrl, keyboardType: TextInputType.number, style: const TextStyle(color: Colors.white), decoration: InputDecoration(labelText: 'Stop Loss (%)', filled: true, fillColor: Colors.black26, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
+              TextField(
+                controller: slCtrl,
+                keyboardType: TextInputType.number,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Stop Loss (%)',
+                  filled: true,
+                  fillColor: Colors.black26,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+              ),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: Colors.white54))),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor),
               onPressed: isSaving ? null : () async {
                 setStateDialog(() => isSaving = true);
-                final res = await this.context.read<ApiService>().postEndpoint('trade.php?action=update_tpsl', {'id': id, 'tp_percent': tpCtrl.text, 'sl_percent': slCtrl.text});
+                final res = await this.context.read<ApiService>().postEndpoint(
+                  'trade.php?action=update_tpsl',
+                  {'id': id, 'tp_percent': tpCtrl.text, 'sl_percent': slCtrl.text},
+                );
                 if (mounted) {
                   Navigator.pop(ctx);
-                  ScaffoldMessenger.of(this.context).showSnackBar(SnackBar(content: Text(res['message'] ?? ''), backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red));
+                  ScaffoldMessenger.of(this.context).showSnackBar(SnackBar(
+                    content: Text(res['message'] ?? ''),
+                    backgroundColor: res['status'] == 'success' ? Colors.green : Colors.red,
+                  ));
                   _fetchPositions();
                 }
               },
-              child: isSaving ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white)) : const Text('Save', style: TextStyle(color: Colors.white)),
+              child: isSaving 
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white)) 
+                : const Text('Save', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -174,15 +214,25 @@ class _PositionsScreenState extends State<PositionsScreen> {
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16),
             height: 48,
-            decoration: BoxDecoration(color: Colors.black.withOpacity(0.3), borderRadius: BorderRadius.circular(24), border: Border.all(color: Colors.white.withOpacity(0.05))),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white.withOpacity(0.05)),
+            ),
             child: TabBar(
               indicatorSize: TabBarIndicatorSize.tab,
               dividerColor: Colors.transparent,
-              indicator: BoxDecoration(borderRadius: BorderRadius.circular(24), gradient: LinearGradient(colors: [theme.primaryColor, const Color(0xFFE024CE)])),
+              indicator: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                gradient: LinearGradient(colors: [theme.primaryColor, const Color(0xFFE024CE)]),
+              ),
               labelColor: Colors.white,
               unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
               labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              tabs: [Tab(text: 'Open Trades (${_openPositions.length})'), Tab(text: 'Closed (${_closedPositions.length})')],
+              tabs: [
+                Tab(text: 'Open Trades (${_openPositions.length})'),
+                Tab(text: 'Closed (${_closedPositions.length})'),
+              ],
             ),
           ),
           const SizedBox(height: 12),
@@ -191,7 +241,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
               ? const Center(child: CircularProgressIndicator()) 
               : TabBarView(
                   children: [
-                    // OPEN POSITIONS
+                    // ================== OPEN POSITIONS TAB ==================
                     RefreshIndicator(
                       onRefresh: _fetchPositions,
                       child: _openPositions.isEmpty 
@@ -212,6 +262,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
+                                      // Header Row
                                       Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
@@ -219,38 +270,84 @@ class _PositionsScreenState extends State<PositionsScreen> {
                                             onTap: () => _launchDexScreener(p['token_address'] ?? ''),
                                             child: Row(
                                               children: [
-                                                Text(_formatAddress(p['token_address'] ?? ''), style: const TextStyle(color: Colors.blueAccent, fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 13, decoration: TextDecoration.underline)),
+                                                Text(
+                                                  _formatAddress(p['token_address'] ?? ''),
+                                                  style: const TextStyle(color: Colors.blueAccent, fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 13, decoration: TextDecoration.underline),
+                                                ),
                                                 const SizedBox(width: 4),
                                                 const Icon(PhosphorIcons.arrowUpRight, color: Colors.blueAccent, size: 14),
                                               ],
                                             ),
                                           ),
-                                          Text(p['wallet_label'] ?? 'Manual', style: const TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold)),
+                                          Text(
+                                            p['wallet_label'] ?? 'Manual',
+                                            style: const TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold),
+                                          ),
                                         ],
                                       ),
                                       const SizedBox(height: 16),
+                                      
+                                      // MCAP Row
                                       Row(
                                         children: [
-                                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('ENTRY MCAP', style: TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 1)), const SizedBox(height: 4), Text(_formatMcap(p['entry_mcap']), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))])),
-                                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('LIVE MCAP', style: TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 1)), const SizedBox(height: 4), Text(_formatMcap(p['current_mcap']), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))])),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                const Text('ENTRY MCAP', style: TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 1)),
+                                                const SizedBox(height: 4),
+                                                Text(_formatMcap(p['entry_mcap']), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                              ],
+                                            ),
+                                          ),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                const Text('LIVE MCAP', style: TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 1)),
+                                                const SizedBox(height: 4),
+                                                Text(_formatMcap(p['current_mcap']), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                              ],
+                                            ),
+                                          ),
                                         ],
                                       ),
                                       const SizedBox(height: 16),
+
+                                      // PNL & Size Row
                                       Row(
                                         children: [
-                                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                            const Text('UNREALIZED P&L', style: TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 1)), 
-                                            const SizedBox(height: 4), 
-                                            Text('${isProfit ? '+' : ''}\$${pnl.toStringAsFixed(2)} (${isProfit ? '+' : ''}${pct.toStringAsFixed(1)}%)', style: TextStyle(color: isProfit ? Colors.greenAccent : Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 13))
-                                          ])),
-                                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                            const Text('TRADE SIZE', style: TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 1)), 
-                                            const SizedBox(height: 4), 
-                                            Text('\$${double.tryParse(p['virtual_usd_amount']?.toString() ?? '0')?.toStringAsFixed(2) ?? '0.00'}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))
-                                          ])),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                const Text('UNREALIZED P&L', style: TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 1)),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  '${isProfit ? '+' : ''}\$${pnl.toStringAsFixed(2)} (${isProfit ? '+' : ''}${pct.toStringAsFixed(1)}%)',
+                                                  style: TextStyle(color: isProfit ? Colors.greenAccent : Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 13),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                const Text('TRADE SIZE', style: TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 1)),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  '\$${double.tryParse(p['virtual_usd_amount']?.toString() ?? '0')?.toStringAsFixed(2) ?? '0.00'}',
+                                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
                                         ],
                                       ),
                                       const SizedBox(height: 16),
+
+                                      // Time and Edit Buttons Row
                                       Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
@@ -258,29 +355,45 @@ class _PositionsScreenState extends State<PositionsScreen> {
                                             children: [
                                               const Icon(PhosphorIcons.clock, color: Colors.purpleAccent, size: 12),
                                               const SizedBox(width: 4),
-                                              Text('${calculateTimeInTrade(p['opened_at'])} • ${formatLagosTime(p['opened_at'])}', style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                                              Text(
+                                                '${calculateTimeInTrade(p['opened_at'])} • ${formatLagosTime(p['opened_at'])}',
+                                                style: const TextStyle(color: Colors.white54, fontSize: 11),
+                                              ),
                                             ],
                                           ),
                                           InkWell(
                                             onTap: () => _openEditModal(p['id'], p['tp_percent']?.toString() ?? '50', p['sl_percent']?.toString() ?? '20'),
                                             child: Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                              decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(6), border: Border.all(color: Colors.white24)),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white10,
+                                                borderRadius: BorderRadius.circular(6),
+                                                border: Border.all(color: Colors.white24),
+                                              ),
                                               child: Row(
                                                 children: [
                                                   const Icon(PhosphorIcons.pencilSimple, color: Colors.white54, size: 12),
                                                   const SizedBox(width: 4),
-                                                  Text('+${p['tp_percent']}% / -${p['sl_percent']}%', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                                                  Text(
+                                                    '+${p['tp_percent']}% / -${p['sl_percent']}%',
+                                                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                                  ),
                                                 ],
-                                            )),
-                                          )
+                                              ),
+                                            ),
+                                          ),
                                         ],
                                       ),
                                       const SizedBox(height: 12),
+                                      
+                                      // Close Button
                                       SizedBox(
                                         width: double.infinity,
                                         child: OutlinedButton.icon(
-                                          style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.redAccent), foregroundColor: Colors.redAccent),
+                                          style: OutlinedButton.styleFrom(
+                                            side: const BorderSide(color: Colors.redAccent),
+                                            foregroundColor: Colors.redAccent,
+                                          ),
                                           onPressed: () => _closePosition(p['id']),
                                           icon: const Icon(PhosphorIcons.handPalm, size: 16),
                                           label: const Text('Close Trade Now', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
@@ -294,7 +407,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
                           ),
                     ),
 
-                    // CLOSED POSITIONS
+                    // ================== CLOSED POSITIONS TAB ==================
                     RefreshIndicator(
                       onRefresh: _fetchPositions,
                       child: _closedPositions.isEmpty 
@@ -317,6 +430,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
+                                      // Header Row
                                       Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
@@ -324,7 +438,10 @@ class _PositionsScreenState extends State<PositionsScreen> {
                                             onTap: () => _launchDexScreener(p['token_address'] ?? ''),
                                             child: Row(
                                               children: [
-                                                Text(_formatAddress(p['token_address'] ?? ''), style: const TextStyle(color: Colors.blueAccent, fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 13, decoration: TextDecoration.underline)),
+                                                Text(
+                                                  _formatAddress(p['token_address'] ?? ''),
+                                                  style: const TextStyle(color: Colors.blueAccent, fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 13, decoration: TextDecoration.underline),
+                                                ),
                                                 const SizedBox(width: 4),
                                                 const Icon(PhosphorIcons.arrowUpRight, color: Colors.blueAccent, size: 14),
                                               ],
@@ -332,37 +449,101 @@ class _PositionsScreenState extends State<PositionsScreen> {
                                           ),
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(color: badgeColor.withOpacity(0.1), border: Border.all(color: badgeColor.withOpacity(0.3)), borderRadius: BorderRadius.circular(4)),
+                                            decoration: BoxDecoration(
+                                              color: badgeColor.withOpacity(0.1),
+                                              border: Border.all(color: badgeColor.withOpacity(0.3)),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
                                             child: Text(badgeText, style: TextStyle(color: badgeColor, fontSize: 10, fontWeight: FontWeight.bold)),
                                           )
                                         ],
                                       ),
-                                      const SizedBox(height: 12),
+                                      const SizedBox(height: 16),
+
+                                      // MCAP Row (RESTORED FOR HISTORY TAB)
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                const Text('ENTRY MCAP', style: TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 1)),
+                                                const SizedBox(height: 4),
+                                                Text(_formatMcap(p['entry_mcap']), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                              ],
+                                            ),
+                                          ),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                const Text('EXIT MCAP', style: TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 1)),
+                                                const SizedBox(height: 4),
+                                                Text(_formatMcap(p['close_mcap']), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 16),
+
+                                      // PNL & Size Row
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                const Text('REALIZED P&L', style: TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 1)),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  '${isProfit ? '+' : ''}\$${pnl.toStringAsFixed(2)}',
+                                                  style: TextStyle(color: isProfit ? Colors.greenAccent : Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 16),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                const Text('TRADE SIZE', style: TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 1)),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  '\$${double.tryParse(p['virtual_usd_amount']?.toString() ?? '0')?.toStringAsFixed(2) ?? '0.00'}',
+                                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 16),
+
+                                      // Time Information Row
                                       Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                          Row(
                                             children: [
-                                              const Text('REALIZED P&L', style: TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 1)),
-                                              const SizedBox(height: 2),
-                                              Text('${isProfit ? '+' : ''}\$${pnl.toStringAsFixed(2)}', style: TextStyle(color: isProfit ? Colors.greenAccent : Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 16)),
+                                              const Icon(PhosphorIcons.clock, color: Colors.white54, size: 12),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                formatLagosTime(p['closed_at']),
+                                                style: const TextStyle(color: Colors.white54, fontSize: 10),
+                                              ),
                                             ],
                                           ),
-                                          Column(
-                                            crossAxisAlignment: CrossAxisAlignment.end,
+                                          Row(
                                             children: [
-                                              Row(
-                                                children: [
-                                                  const Icon(PhosphorIcons.hourglassHigh, color: Colors.amberAccent, size: 12),
-                                                  const SizedBox(width: 4),
-                                                  Text(calculateTimeInTrade(p['opened_at'], p['closed_at']), style: const TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold, fontSize: 11)),
-                                                ],
+                                              const Icon(PhosphorIcons.hourglassHigh, color: Colors.amberAccent, size: 12),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                calculateTimeInTrade(p['opened_at'], p['closed_at']),
+                                                style: const TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold, fontSize: 11),
                                               ),
-                                              const SizedBox(height: 2),
-                                              Text(formatLagosTime(p['closed_at']), style: const TextStyle(color: Colors.white54, fontSize: 10)),
                                             ],
-                                          )
+                                          ),
                                         ],
                                       ),
                                     ],
