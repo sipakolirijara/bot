@@ -8,6 +8,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Explicitly grant the Action permission to push the keystore back to your repo
+    permissions:
+      contents: write
+
     steps:
       - uses: actions/checkout@v4
 
@@ -15,6 +19,24 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '17'
+
+      - name: Generate and Save Permanent Keystore (If Missing)
+        run: |
+          if [ ! -f "kainuwa_keystore.jks" ]; then
+            echo "Keystore missing. Generating and committing to repository..."
+            keytool -genkey -v -keystore kainuwa_keystore.jks \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -alias kainuwa_key -storepass kainuwa123 -keypass kainuwa123 \
+              -dname "CN=Kainuwa, OU=Dev, O=Kainuwa Digital, L=Abuja, S=FCT, C=NG"
+            
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            git add kainuwa_keystore.jks
+            git commit -m "chore: auto-generate permanent Android release keystore"
+            git push
+          else
+            echo "Permanent keystore found. Reusing it for signature consistency."
+          fi
 
       - uses: subosito/flutter-action@v2
         with:
@@ -26,12 +48,10 @@ jobs:
           flutter create --org com.kainuwa --project-name bot .
           rm -f android/app/build.gradle.kts
 
-      - name: Generate Release Keystore
+      - name: Apply Permanent Keystore
         run: |
-          keytool -genkey -v -keystore android/app/keystore.jks \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -alias kainuwa_key -storepass kainuwa123 -keypass kainuwa123 \
-            -dname "CN=Kainuwa, OU=Dev, O=Kainuwa Digital, L=Abuja, S=FCT, C=NG"
+          # Copy the permanent keystore into the newly created android/app directory
+          cp kainuwa_keystore.jks android/app/keystore.jks
 
       - name: Configure Gradle Signing & Application ID
         run: |
